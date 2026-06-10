@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Survival Arena - 主選單</title>
+    <script>
+        // 登入檢查：如果沒有暱稱，跳轉回登入頁面
+        if (!localStorage.getItem('playerNickname')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #003333 0%, #000000 100%);
+        }
+
+        /* 動態背景星空效果 */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .menu-container {
+            position: relative;
+            text-align: center;
+            z-index: 10;
+            padding: 50px;
+            background: rgba(0, 20, 20, 0.85);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.15), inset 0 0 20px rgba(0, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            width: 400px;
+        }
+
+        /* 科技感裝飾角 */
+        .menu-container::before, .menu-container::after,
+        .corner-br, .corner-bl {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #00ffff;
+            pointer-events: none;
+        }
+        .menu-container::before { top: -2px; left: -2px; border-right: none; border-bottom: none; }
+        .menu-container::after { top: -2px; right: -2px; border-left: none; border-bottom: none; }
+        .corner-br { bottom: -2px; right: -2px; border-left: none; border-top: none; }
+        .corner-bl { bottom: -2px; left: -2px; border-right: none; border-top: none; }
+
+        h1 {
+            font-size: 3.2em;
+            color: #00ffff;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+            letter-spacing: 6px;
+            font-weight: 900;
+        }
+        .subtitle {
+            margin-top: 5px;
+            margin-bottom: 35px;
+            opacity: 0.6;
+            font-size: 0.9em;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+        .nav-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .nav-btn {
+            padding: 14px;
+            font-size: 1.05em;
+            background: rgba(0, 255, 255, 0.03);
+            color: #00ffff;
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            text-align: center;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+        .nav-btn::before {
+            content: "";
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: 0.5s;
+        }
+        .nav-btn:hover::before { left: 100%; }
+        .nav-btn:hover {
+            background: rgba(0, 255, 255, 0.15);
+            border-color: #00ffff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+            color: white;
+        }
+        .nav-btn.primary {
+            background: #00ffff;
+            color: #001a1a;
+            border: none;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+        .nav-btn.primary:hover {
+            background: #ffffff;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+            transform: translateY(-3px);
+        }
+        .user-info {
+            margin-bottom: 25px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            color: #00ffff;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .logout-link {
+            font-size: 0.8em;
+            color: #ff5555;
+            text-decoration: none;
+            cursor: pointer;
+            padding: 2px 8px;
+            border: 1px solid rgba(255, 85, 85, 0.3);
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        .logout-link:hover {
+            background: #ff5555;
+            color: white;
+        }
+        .stats-preview {
+            margin-top: 35px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0, 255, 255, 0.1);
+            font-size: 1.1em;
+            color: #ffff00;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+        }
+        /* 導航列樣式 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 10, 10, 0.9);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 15px 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        .navbar a {
+            color: #00ffff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            transition: 0.3s;
+            opacity: 0.6;
+            letter-spacing: 2px;
+        }
+        .navbar a:hover {
+            opacity: 1;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        .navbar a.active {
+            opacity: 1;
+            color: #fff;
+            border-bottom: 2px solid #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation" id="bg-stars"></div>
+    <nav class="navbar">
+        <a href="index.html" class="active">HOME</a>
+        <a href="game.html">BATTLE</a>
+        <a href="skills.html">SKILLS</a>
+        <a href="tutorial.html">TUTORIAL</a>
+        <a href="leaderboard.html">RANKING</a>
+        <a href="credits.html">ABOUT</a>
+        <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="margin-left: auto; color: var(--neon-yellow); opacity: 0.8;">English</a>
+    </nav>
+    <script src="translations.js"></script>
+    <div class="menu-container">
+        <div class="corner-br"></div>
+        <div class="corner-bl"></div>
+        <h1 data-i18n="main-title">ARENA</h1>
+        <p class="subtitle" data-i18n="main-subtitle">3D Survival Multiplayer</p>
+        
+        <div class="user-info">
+            <span>👤 <span id="display-nickname">玩家</span></span>
+            <span class="logout-link" onclick="logout()" data-i18n="main-logout">LOGOUT</span>
+        </div>
+
+        <div class="nav-buttons">
+            <a href="game.html" class="nav-btn primary" data-i18n="main-start">LAUNCH GAME</a>
+            <a href="tutorial.html" class="nav-btn" data-i18n="main-tutorial">HOW TO PLAY</a>
+            <a href="leaderboard.html" class="nav-btn" data-i18n="main-rank-btn">LEADERBOARD</a>
+        </div>
+
+        <div class="stats-preview">
+            CREDITS: 🔑 <span id="key-display">300</span>
+        </div>
+    </div>
+
+    <script>
+        // 生成背景星星
+        const bg = document.getElementById('bg-stars');
+        for (let i = 0; i < 100; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            const size = Math.random() * 3 + 'px';
+            star.style.width = size;
+            star.style.height = size;
+            star.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+            bg.appendChild(star);
+        }
+
+        // 從本地存儲獲取與暱稱綁定的進度
+        const currentNickname = localStorage.getItem('playerNickname') || 'guest';
+        const savedKeysRaw = localStorage.getItem(currentNickname + '_game_keys');
+        const savedKeys = savedKeysRaw !== null ? savedKeysRaw : '300';
+        document.getElementById('key-display').innerText = savedKeys;
+        document.getElementById('display-nickname').textContent = currentNickname;
+
+        function logout() {
+            if (confirm('確定要登出並更改暱稱嗎？')) {
+                localStorage.removeItem('playerNickname');
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>

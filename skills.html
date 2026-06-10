@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKILLS - 3D Survival Arena</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        if (!localStorage.getItem('playerNickname')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <style>
+        :root {
+            --neon-blue: #00ffff;
+            --neon-yellow: #ffff00;
+            --neon-purple: #bc13fe;
+            --bg-dark: #000a0a;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at center, #001515 0%, #000 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 15px 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        .navbar a {
+            color: #00ffff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            transition: 0.3s;
+            opacity: 0.6;
+            letter-spacing: 2px;
+        }
+        .navbar a:hover { opacity: 1; text-shadow: 0 0 10px #00ffff; }
+        .navbar a.active { opacity: 1; color: white; border-bottom: 2px solid #00ffff; }
+
+        .container {
+            max-width: 1000px;
+            margin: 100px auto 50px;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        .header h1 {
+            font-size: 3em;
+            color: var(--neon-blue);
+            letter-spacing: 10px;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            margin: 0;
+        }
+        .header p {
+            opacity: 0.5;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+
+        .balance-info {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px 30px;
+            border-radius: 4px;
+            display: inline-block;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            margin-bottom: 30px;
+        }
+        .balance-info span {
+            color: var(--neon-yellow);
+            font-size: 1.5em;
+            font-weight: 900;
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .skill-card {
+            background: rgba(0, 20, 20, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 25px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .skill-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--neon-blue);
+            opacity: 0.3;
+        }
+        .skill-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--neon-blue);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.1);
+            background: rgba(0, 30, 30, 0.9);
+        }
+        .skill-card.unlocked {
+            border-color: var(--neon-yellow);
+        }
+        .skill-card.unlocked::before {
+            background: var(--neon-yellow);
+            opacity: 1;
+        }
+
+        .skill-icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        .skill-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--neon-blue);
+            letter-spacing: 1px;
+        }
+        .skill-desc {
+            font-size: 0.9em;
+            opacity: 0.7;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+        .skill-cost {
+            color: var(--neon-yellow);
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .unlock-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 4px;
+        }
+        .unlock-btn:hover:not(:disabled) {
+            background: var(--neon-blue);
+            color: black;
+        }
+        .unlock-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: #555;
+            color: #555;
+        }
+        .status-tag {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            letter-spacing: 1px;
+        }
+        .unlocked .status-tag {
+            background: var(--neon-yellow);
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html">HOME</a>
+        <a href="game.html">BATTLE</a>
+        <a href="skills.html" class="active">SKILLS</a>
+        <a href="tutorial.html">TUTORIAL</a>
+        <a href="leaderboard.html">RANKING</a>
+        <a href="credits.html">ABOUT</a>
+        <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="margin-left: auto; color: #ffff00; opacity: 0.8;">English</a>
+    </nav>
+    <script src="translations.js"></script>
+
+    <div class="container">
+        <div class="header">
+            <h1>SKILL AUGMENTATION</h1>
+            <p>Enhance your operator's combat efficiency</p>
+            
+            <div class="balance-info">
+                AVAILABLE CREDITS: 🔑 <span id="key-display">300</span>
+            </div>
+        </div>
+
+        <div class="skills-grid" id="skills-container">
+            <!-- Skills will be generated here -->
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const nickname = localStorage.getItem('playerNickname');
+        const prefix = nickname + '_';
+        
+        let playerKeys = parseInt(localStorage.getItem(prefix + 'game_keys')) || 300;
+        let unlockedSkills = JSON.parse(localStorage.getItem(prefix + 'game_unlocked_skills')) || [];
+
+        const skillsConfig = [
+            { id: 'vampiric', name: 'Vampiric Strike', icon: '🩸', cost: 500, desc: 'Restore 10 HP instantly upon every enemy elimination.' },
+            { id: 'adrenaline', name: 'Adrenaline Rush', icon: '⚡', cost: 800, desc: 'Increase movement speed by 40% when health drops below 50 HP.' },
+            { id: 'shield', name: 'Shield Overload', icon: '🛡️', cost: 600, desc: 'Permanently increases maximum HP to 350.' },
+            { id: 'scavenger', name: 'Master Scavenger', icon: '💰', cost: 1000, desc: 'Double the amount of Credits (🔑) earned from every kill.' },
+            { id: 'shadow', name: 'Shadow Step', icon: '👣', cost: 400, desc: 'Reduce Tactical Slide cooldown by 50%.' },
+            { id: 'precision', name: 'Deadly Precision', icon: '🎯', cost: 1200, desc: 'Headshot damage multiplier increased to 3.0x.' },
+            { id: 'berserker', name: 'Berserker Soul', icon: '🔥', cost: 1500, desc: 'Deal 50% more damage but you can no longer pick up health packs.' },
+            { id: 'magnetic', name: 'Credit Magnet', icon: '🧲', cost: 300, desc: 'Credits and items are automatically pulled towards you from distance.' }
+        ];
+
+        function updateUI() {
+            document.getElementById('key-display').innerText = playerKeys;
+            const container = document.getElementById('skills-container');
+            container.innerHTML = '';
+
+            skillsConfig.forEach(skill => {
+                const isUnlocked = unlockedSkills.includes(skill.id);
+                const card = document.createElement('div');
+                card.className = `skill-card ${isUnlocked ? 'unlocked' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="status-tag">${isUnlocked ? 'ACTIVE' : 'LOCKED'}</div>
+                    <div class="skill-icon">${skill.icon}</div>
+                    <div class="skill-name">${skill.name}</div>
+                    <div class="skill-desc">${skill.desc}</div>
+                    <div class="skill-cost">${isUnlocked ? 'OWNED' : '🔑 ' + skill.cost}</div>
+                    <button class="unlock-btn" ${isUnlocked || playerKeys < skill.cost ? 'disabled' : ''} onclick="unlockSkill('${skill.id}', ${skill.cost})">
+                        ${isUnlocked ? 'Augmented' : 'Unlock Augment'}
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function unlockSkill(id, cost) {
+            if (playerKeys >= cost && !unlockedSkills.includes(id)) {
+                playerKeys -= cost;
+                unlockedSkills.push(id);
+                
+                // Save locally
+                localStorage.setItem(prefix + 'game_keys', playerKeys);
+                localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(unlockedSkills));
+                
+                // Save to server
+                const unlockedWeapons = JSON.parse(localStorage.getItem(prefix + 'game_unlocked_weapons')) || ['rifle', 'pistol'];
+                socket.emit('saveProgress', {
+                    nickname: nickname,
+                    keys: playerKeys,
+                    unlockedWeapons: unlockedWeapons,
+                    unlockedSkills: unlockedSkills
+                });
+
+                updateUI();
+                alert(`SUCCESS: ${id.toUpperCase()} AUGMENTATION COMPLETE.`);
+            }
+        }
+
+        // Initialize
+        window.onload = () => {
+            updateUI();
+            
+            // Sync with server if needed
+            socket.emit('login', nickname);
+            socket.on('loginSuccess', (response) => {
+                playerKeys = response.data.keys;
+                unlockedSkills = response.data.unlockedSkills || [];
+                localStorage.setItem(prefix + 'game_keys', playerKeys);
+                localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(unlockedSkills));
+                updateUI();
+            });
+        };
+    </script>
+</body>
+</html>

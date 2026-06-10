@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Survival Arena - 登入</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #002222 0%, #000 100%);
+        }
+        .login-container {
+            text-align: center;
+            z-index: 10;
+            padding: 50px;
+            background: rgba(0, 15, 15, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 4px;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            width: 350px;
+            position: relative;
+        }
+        .login-container::before {
+            content: ""; position: absolute; top: -2px; left: -2px; width: 20px; height: 20px;
+            border-top: 2px solid #00ffff; border-left: 2px solid #00ffff;
+        }
+        .login-container::after {
+            content: ""; position: absolute; bottom: -2px; right: -2px; width: 20px; height: 20px;
+            border-bottom: 2px solid #00ffff; border-right: 2px solid #00ffff;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #00ffff;
+            margin: 0 0 5px 0;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            letter-spacing: 5px;
+            font-weight: 900;
+        }
+        .subtitle {
+            margin-bottom: 35px;
+            opacity: 0.5;
+            font-size: 0.8em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .input-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00ffff;
+            font-size: 0.75em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0, 255, 255, 0.03);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 2px;
+            color: white;
+            font-size: 1em;
+            outline: none;
+            transition: 0.3s;
+            box-sizing: border-box;
+            letter-spacing: 1px;
+        }
+        input[type="text"]:focus {
+            border-color: #00ffff;
+            background: rgba(0, 255, 255, 0.08);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+        }
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: #00ffff;
+            border: none;
+            color: black;
+            font-size: 1em;
+            font-weight: 900;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
+        }
+        .login-btn:hover {
+            background: white;
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        .footer-note {
+            margin-top: 30px;
+            font-size: 0.7em;
+            opacity: 0.3;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>LOGIN</h1>
+        <div class="subtitle">Enter the 3D Survival Arena</div>
+        
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="nickname">OPERATOR NICKNAME</label>
+                <input type="text" id="nickname" placeholder="ENTER NAME..." required maxlength="15" autocomplete="off">
+            </div>
+            <button type="submit" class="login-btn">ACCESS SYSTEM</button>
+        </form>
+
+        <div class="footer-note">
+            PRIVATE ACCESS • NO PASSWORD REQUIRED
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let isRedirecting = false;
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nickname = document.getElementById('nickname').value.trim();
+            const btn = e.target.querySelector('button');
+            
+            if (nickname && !isRedirecting) {
+                isRedirecting = true;
+                btn.innerText = "登入中...";
+                btn.disabled = true;
+
+                // 檢查本地是否有「該暱稱專屬」的舊存檔資料
+                const localKeys = localStorage.getItem(nickname + '_game_keys');
+                const localWeapons = localStorage.getItem(nickname + '_game_unlocked_weapons');
+                
+                let migrationData = null;
+                if (localKeys || localWeapons) {
+                    migrationData = {
+                        keys: parseInt(localKeys) || 300,
+                        unlockedWeapons: localWeapons ? JSON.parse(localWeapons) : ['rifle', 'pistol'],
+                        unlockedSkills: []
+                    };
+                }
+
+                // 向伺服器登入
+                socket.emit('login', { nickname, migrationData });
+
+                // 設定超時備援
+                setTimeout(() => {
+                    if (localStorage.getItem('playerNickname') !== nickname) {
+                        console.log("伺服器回應較慢，改用本地模式進入");
+                        localStorage.setItem('playerNickname', nickname);
+                        window.location.href = 'index.html';
+                    }
+                }, 1500);
+            }
+        });
+
+        // 接收伺服器傳回的存檔
+        socket.on('loginSuccess', function(response) {
+            const nickname = response.nickname;
+            const data = response.data;
+            
+            console.log("從伺服器收到資料:", data);
+
+            localStorage.setItem('playerNickname', nickname);
+            localStorage.setItem(nickname + '_game_keys', data.keys);
+            localStorage.setItem(nickname + '_game_unlocked_weapons', JSON.stringify(data.unlockedweapons || data.unlockedWeapons));
+            localStorage.setItem(nickname + '_game_unlocked_skills', JSON.stringify(data.unlockedskills || data.unlockedSkills || []));
+            
+            // 清理舊的全局存檔，避免污染新帳號
+            localStorage.removeItem('game_keys');
+            localStorage.removeItem('game_unlocked_weapons');
+            
+            window.location.href = 'index.html';
+        });
+
+        // 如果已經登入了，直接跳轉
+        window.onload = function() {
+            if (localStorage.getItem('playerNickname')) {
+                window.location.href = 'index.html';
+            }
+        }
+    </script>
+</body>
+</html>

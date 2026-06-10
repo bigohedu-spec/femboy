@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>關於項目 - 3D Survival Arena</title>
+    <script>
+        if (!localStorage.getItem('playerNickname')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #050505;
+            color: #ccc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+        }
+        .container {
+            max-width: 700px;
+            margin: 50px auto;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 50px;
+            border-radius: 15px;
+            border: 1px solid #ff00ff;
+            box-shadow: 0 0 25px rgba(255, 0, 255, 0.15);
+        }
+        h1 { color: #ff00ff; font-size: 2.5em; margin-bottom: 40px; }
+        h2 { color: #ff00ff; border-bottom: 1px solid rgba(255, 0, 255, 0.3); display: inline-block; padding-bottom: 5px; }
+        .tech-list {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        .tech-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        .back-btn {
+            display: inline-block;
+            padding: 8px 20px;
+            font-size: 14px;
+            background: transparent;
+            color: #ff00ff;
+            text-decoration: none;
+            font-weight: bold;
+            border: 2px solid #ff00ff;
+            border-radius: 30px;
+            margin-top: 40px;
+            transition: 0.3s;
+        }
+        .back-btn:hover { background: #ff00ff; color: white; transform: translateY(-3px); }
+        p { max-width: 500px; margin: 20px auto; line-height: 1.8; }
+        /* 導航列樣式 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            border-bottom: 1px solid #ff00ff;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+        .navbar a {
+            color: #ff00ff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            transition: 0.3s;
+            opacity: 0.7;
+        }
+        .navbar a:hover {
+            opacity: 1;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+        .navbar a.active {
+            opacity: 1;
+            border-bottom: 2px solid #ff00ff;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html">HOME</a>
+        <a href="game.html">BATTLE</a>
+        <a href="skills.html">SKILLS</a>
+        <a href="tutorial.html">TUTORIAL</a>
+        <a href="leaderboard.html">RANKING</a>
+        <a href="credits.html" class="active">ABOUT</a>
+        <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="margin-left: auto; color: #00ffff; opacity: 0.8;">English</a>
+    </nav>
+    <script src="translations.js"></script>
+    <div class="container" style="margin-top: 80px;">
+        <h1>✨ 關於此專案</h1>
+        
+        <p>
+            <strong>3D Survival Arena</strong> 是一個致力於將復古 Arena Shooter 體驗與現代網頁技術結合的開源實驗性專案。
+        </p>
+
+        <h2>🛠️ 技術棧 (Tech Stack)</h2>
+        <div class="tech-list">
+            <div class="tech-item">Three.js (3D 渲染)</div>
+            <div class="tech-item">Node.js / Express</div>
+            <div class="tech-item">Socket.io (即時同步)</div>
+            <div class="tech-item">Web Audio API</div>
+        </div>
+
+        <h2>📖 開發背景</h2>
+        <p>
+            本專案最初是為了測試大規模多人連線下的實體同步與 3D 碰撞效能。
+            目前已實裝完整的波次系統、經濟系統、武器解鎖機制以及基礎的多人對戰框架。
+        </p>
+
+        <p style="font-size: 0.8em; opacity: 0.5; margin-top: 50px;">
+            Designed & Developed with ❤️ by AI Coding Assistant<br>
+            Current Date: May 20, 2026
+        </p>
+
+        <a href="index.html" class="back-btn">返回首頁</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球記分板 - 3D Survival Arena</title>    <script>
+        if (!localStorage.getItem('playerNickname')) {
+            window.location.href = 'login.html';
+        }
+    </script>    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #050505;
+            color: #eee;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #ffff00;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(255, 255, 0, 0.2);
+        }
+        h1 { color: #ffff00; margin-bottom: 30px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 0, 0.2);
+            text-align: left;
+        }
+        th { color: #ffff00; text-transform: uppercase; }
+        .rank { font-weight: bold; color: #aaa; }
+        .rank-1 { color: #ffd700; font-size: 1.2em; }
+        .rank-2 { color: #c0c0c0; }
+        .rank-3 { color: #cd7f32; }
+        .back-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            font-size: 14px;
+            background: #ffff00;
+            color: black;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+        .back-btn:hover { background: white; transform: scale(1.05); }
+        .loading { font-style: italic; opacity: 0.6; }
+        /* 導航列樣式 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            border-bottom: 1px solid #ffff00;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+        .navbar a {
+            color: #ffff00;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            transition: 0.3s;
+            opacity: 0.7;
+        }
+        .navbar a:hover {
+            opacity: 1;
+            text-shadow: 0 0 10px #ffff00;
+        }
+        .navbar a.active {
+            opacity: 1;
+            border-bottom: 2px solid #ffff00;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html">HOME</a>
+        <a href="game.html">BATTLE</a>
+        <a href="skills.html">SKILLS</a>
+        <a href="tutorial.html">TUTORIAL</a>
+        <a href="leaderboard.html" class="active">RANKING</a>
+        <a href="credits.html">ABOUT</a>
+        <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="margin-left: auto; color: #00ffff; opacity: 0.8;">English</a>
+    </nav>
+    <script src="translations.js"></script>
+    <div class="container" style="margin-top: 80px;">
+        <h1>🏆 全球精英記分板</h1>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>玩家 ID</th>
+                    <th>擊殺數</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <tr>
+                    <td colspan="3" class="loading">正在連線至大廳並獲取即時數據...</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-bottom: 20px; font-size: 14px; color: #888;">
+            注意：上方僅顯示當前在線玩家。
+        </div>
+
+        <h1 style="margin-top: 50px;">🌍 全球總擊殺排行 (Supabase)</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>玩家暱稱</th>
+                    <th>總擊殺數</th>
+                </tr>
+            </thead>
+            <tbody id="global-leaderboard-body">
+                <tr>
+                    <td colspan="3" class="loading">正在讀取全球數據...</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <a href="index.html" class="back-btn">返回遊戲首頁</a>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const body = document.getElementById('leaderboard-body');
+        const globalBody = document.getElementById('global-leaderboard-body');
+
+        // 請求全球數據
+        socket.emit('getGlobalLeaderboard');
+
+        socket.on('currentPlayers', (players) => {
+            updateList(players);
+        });
+
+        socket.on('globalLeaderboardData', (data) => {
+            updateGlobalList(data);
+        });
+
+        socket.on('playerDeath', (data) => {
+            updateList(data.players);
+        });
+
+        function updateList(players) {
+            const sorted = Object.values(players).sort((a, b) => b.score - a.score);
+            body.innerHTML = '';
+            
+            if (sorted.length === 0) {
+                body.innerHTML = '<tr><td colspan="3" style="text-align:center;">目前沒有玩家在線</td></tr>';
+                return;
+            }
+
+            sorted.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                const rankClass = index < 3 ? `rank-${index + 1}` : 'rank';
+                const displayName = p.nickname || (p.id.substr(0, 8) + '...');
+                tr.innerHTML = `
+                    <td class="${rankClass}">${index + 1}</td>
+                    <td>${displayName}</td>
+                    <td style="font-family: monospace; font-size: 1.1em;">${p.score}</td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function updateGlobalList(data) {
+            globalBody.innerHTML = '';
+            if (!data || data.length === 0) {
+                globalBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">尚無全球排行數據</td></tr>';
+                return;
+            }
+
+            data.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                const rankClass = index < 3 ? `rank-${index + 1}` : 'rank';
+                tr.innerHTML = `
+                    <td class="${rankClass}">${index + 1}</td>
+                    <td>${p.nickname}</td>
+                    <td style="font-family: monospace; font-size: 1.1em;">${p.total_kills}</td>
+                `;
+                globalBody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>

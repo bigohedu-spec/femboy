@@ -1,0 +1,666 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Survival Arena - 戰鬥準備</title>
+    <script>
+        // 登入檢查
+        if (!localStorage.getItem('playerNickname')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <style>
+        :root {
+            --neon-blue: #00ffff;
+            --neon-red: #ff3333;
+            --neon-yellow: #ffff00;
+        }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        
+        #welcome-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #001515 0%, #000 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+            backdrop-filter: blur(8px);
+        }
+
+        .game-title {
+            font-size: 4em;
+            color: var(--neon-blue);
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            margin: 0;
+            letter-spacing: 10px;
+            font-weight: 900;
+        }
+
+        .start-btn {
+            padding: 15px 50px;
+            font-size: 24px;
+            background: var(--neon-blue);
+            border: none;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.3s;
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+            margin-top: 20px;
+        }
+        .start-btn:hover { 
+            background: white; 
+            box-shadow: 0 0 30px var(--neon-blue);
+            transform: scale(1.05);
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .hud-panel {
+            background: rgba(0, 20, 20, 0.7);
+            border-left: 5px solid var(--neon-blue);
+            padding: 15px 25px;
+            backdrop-filter: blur(5px);
+            clip-path: polygon(0 0, 90% 0, 100% 100%, 0 100%);
+            min-width: 250px;
+        }
+        .hp-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 5px;
+        }
+        .hp-bar-outer {
+            flex: 1;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        #hp-bar {
+            height: 100%;
+            background: var(--neon-blue);
+            box-shadow: 0 0 10px var(--neon-blue);
+            transition: width 0.3s;
+        }
+        .ammo-panel {
+            background: rgba(0, 20, 20, 0.7);
+            border-right: 5px solid var(--neon-yellow);
+            padding: 15px 25px;
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%);
+            text-align: right;
+            min-width: 150px;
+            z-index: 10;
+        }
+        #ammo-text { font-size: 32px; font-weight: 900; color: white; }
+        
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            background: rgba(0,0,0,0.8);
+            padding: 15px 0;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(0,255,255,0.2);
+        }
+        .navbar a {
+            color: var(--neon-blue); text-decoration: none; font-size: 13px; font-weight: bold;
+            letter-spacing: 2px; opacity: 0.6; transition: 0.3s;
+        }
+        .navbar a:hover, .navbar a.active { opacity: 1; text-shadow: 0 0 10px var(--neon-blue); }
+
+        .loadout-container {
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            padding: 15px; border-radius: 4px;
+        }
+        .loadout-slot {
+            width: 120px; height: 60px; background: rgba(0,0,0,0.5); border: 1px solid #333; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            font-size: 11px; cursor: pointer; position: relative;
+        }
+        .loadout-slot.active { border-color: var(--neon-blue); }
+        .weapon-tag {
+            padding: 4px 8px; background: rgba(0, 255, 255, 0.1);
+            border: 1px solid var(--neon-blue); border-radius: 2px;
+            font-size: 11px; cursor: pointer; color: var(--neon-blue);
+        }
+        #weapons-modal {
+            position: fixed;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 450px; 
+            max-height: 80vh;
+            background: rgba(0, 10, 10, 0.95);
+            border: 1px solid var(--neon-blue);
+            padding: 25px; z-index: 2000;
+            display: none; flex-direction: column;
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(15px);
+        }
+        .weapon-list-scroll {
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 10px;
+            margin-top: 10px;
+        }
+        .weapon-list-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .weapon-list-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 255, 255, 0.05);
+        }
+        .weapon-list-scroll::-webkit-scrollbar-thumb {
+            background: var(--neon-blue);
+            border-radius: 3px;
+        }
+        .weapon-card {
+            background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 4px;
+            margin-bottom: 10px; border-left: 3px solid var(--neon-blue);
+        }
+        #crosshair {
+            position: fixed;
+            top: 50%; left: 50%;
+            width: 30px; height: 30px;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar" id="game-navbar">
+        <a href="index.html">HOME</a>
+        <a href="game.html" class="active">BATTLE</a>
+        <a href="skills.html">SKILLS</a>
+        <a href="#" onclick="toggleWeaponsModal(true)">ARSENAL</a>
+        <a href="tutorial.html">TUTORIAL</a>
+        <a href="leaderboard.html">RANK</a>
+        <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="margin-left: 20px; color: var(--neon-yellow); opacity: 0.8;">English</a>
+    </nav>
+    <script src="translations.js"></script>
+    <button class="back-to-menu" id="back-to-menu-btn" onclick="location.href='index.html'">返回主選單 (ESC)</button>
+    <div id="welcome-screen">
+        <h1 class="game-title">ARENA</h1>
+        <div style="margin: 10px 0 30px 0; color: var(--neon-blue); font-size: 1.1em; letter-spacing: 4px;">
+            OPERATOR: <span id="player-name-display">GUEST</span>
+        </div>
+
+        <div style="display: flex; gap: 20px; margin-bottom: 30px; align-items: flex-start; justify-content: center;">
+            <div class="loadout-container" style="min-width: 320px;">
+                <div style="color: var(--neon-blue); font-size: 11px; margin-bottom: 12px; font-weight: bold; letter-spacing: 2px;">LOADOUT CONFIG</div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <div class="loadout-slot" id="slot-0" onclick="removeFromLoadout(0)">
+                        <span style="opacity: 0.4; font-size: 9px;">PRIMARY</span>
+                        <span class="weapon-name">EMPTY</span>
+                        <button class="remove-btn">?</button>
+                    </div>
+                    <div class="loadout-slot" id="slot-1" onclick="removeFromLoadout(1)">
+                        <span style="opacity: 0.4; font-size: 9px;">SECONDARY</span>
+                        <span class="weapon-name">EMPTY</span>
+                        <button class="remove-btn">?</button>
+                    </div>
+                    <div class="loadout-slot" id="slot-skill" onclick="removeSkillFromLoadout()" style="border-color: var(--neon-yellow);">
+                        <span style="opacity: 0.4; font-size: 9px; color: var(--neon-yellow);">SKILL</span>
+                        <span class="skill-name">EMPTY</span>
+                        <button class="remove-btn">?</button>
+                    </div>
+                </div>
+                <div id="unlocked-weapon-tags" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;"></div>
+                <div id="unlocked-skill-tags" style="margin-top: 10px; border-top: 1px solid rgba(255,255,0,0.1); padding-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;"></div>
+            </div>
+
+            <div class="loadout-container" style="min-width: 150px; display: flex; flex-direction: column; justify-content: center; align-self: stretch;">
+                <div style="color: var(--neon-yellow); font-size: 11px; margin-bottom: 5px; font-weight: bold;">CREDITS</div>
+                <div style="font-size: 28px; color: var(--neon-yellow); font-weight: 900;">🔑 <span id="welcome-key-count">300</span></div>
+                <button class="secondary-btn" onclick="toggleWeaponsModal(true)" style="margin-top: 10px; font-size: 10px; padding: 5px; border-color: var(--neon-yellow); color: var(--neon-yellow);">OPEN ARSENAL</button>
+            </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; margin-bottom: 25px; font-size: 11px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="opacity: 0.5;">SENSITIVITY:</span>
+                <input type="range" id="sensitivity-slider" min="0.1" max="10.0" step="0.1" value="1.0">
+                <span id="sensitivity-number" style="min-width: 25px; color: var(--neon-blue);">1.0</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="opacity: 0.5;">ZOOM SENS:</span>
+                <input type="range" id="zoom-sensitivity-slider" min="0.1" max="2.0" step="0.05" value="0.5">
+                <span id="zoom-sensitivity-number" style="min-width: 25px; color: var(--neon-blue);">0.5</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="opacity: 0.5;">VOLUME:</span>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5">
+                <span id="volume-value" style="min-width: 25px; color: var(--neon-yellow);">50%</span>
+            </div>
+        </div>
+
+        <button class="start-btn" id="start-game-btn" onclick="startGame()">INITIATE COMBAT</button>
+        
+        <div style="margin-top: 20px; display: flex; gap: 20px; font-size: 10px; opacity: 0.3; letter-spacing: 2px;">
+            <span>WASD: MOVE</span>
+            <span>L-CLICK: FIRE</span>
+            <span>R-CLICK: AIM</span>
+            <span>R: RELOAD</span>
+        </div>
+    </div>
+
+    <!-- 武器庫彈窗 -->
+    <div id="weapons-modal">
+        <span class="close-modal" onclick="toggleWeaponsModal(false)">&times;</span>
+        <h2 style="color: #00ffff; text-align: center; margin-top: 0;">武器庫</h2>
+        <div style="text-align: center; color: #ffff00; font-size: 20px; margin-bottom: 20px;">
+            擁有金鑰: 🔑 <span id="modal-key-count">0</span>
+        </div>
+        
+        <div class="weapon-list-scroll">
+            <div class="weapon-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>自動步槍 (Rifle)</h3>
+                    <span style="color: #00ff00;">已擁有</span>
+                </div>
+                <p>彈匣容量: 30 | 射速: 極快</p>
+                <p>武器說明: 全自動步槍，適合中短距離作戰。</p>
+            </div>
+            
+            <div class="weapon-card" id="card-knife">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>軍用匕首 (Knife)</h3>
+                    <button class="secondary-btn" id="unlock-knife" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('knife', 50)">解鎖 (🔑 50)</button>
+                </div>
+                <p>傷害: 15 (背刺 150) | 攻速: 中等</p>
+                <p>武器說明: 潛行時從背後攻擊可造成巨大傷害。</p>
+            </div>
+
+            <div class="weapon-card" id="card-sniper">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>狙擊步槍 (Sniper)</h3>
+                    <button class="secondary-btn" id="unlock-sniper" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('sniper', 200)">解鎖 (🔑 200)</button>
+                </div>
+                <p>傷害: 150 | 射速: 極慢</p>
+                <p>武器說明: 配備高倍率瞄準鏡，遠距離一擊必殺。</p>
+            </div>
+
+            <div class="weapon-card" id="card-shotgun">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>散彈槍 (Shotgun)</h3>
+                    <button class="secondary-btn" id="unlock-shotgun" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('shotgun', 100)">解鎖 (🔑 100)</button>
+                </div>
+                <p>傷害: 15x8 | 射速: 慢</p>
+                <p>武器說明: 近距離之王，能造成大面積傷害。</p>
+            </div>
+
+            <div class="weapon-card" id="card-pistol">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>手槍 (Pistol)</h3>
+                    <button class="secondary-btn" id="unlock-pistol" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('pistol', 30)">解鎖 (🔑 30)</button>
+                </div>
+                <p>彈匣容量: 20 | 射速: 中等</p>
+                <p>武器說明: 標準副武器，在主武器沒彈藥時救命。</p>
+            </div>
+
+            <div class="weapon-card" id="card-paintball">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>漆彈槍 (BOSS 專用)</h3>
+                    <button class="secondary-btn" id="unlock-paintball" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('paintball', 150)">解鎖 (🔑 150)</button>
+                </div>
+                <p>彈匣容量: 25 | 射速: 極快</p>
+                <p>武器說明: BOSS 專用武器，發射高黏度漆彈。</p>
+            </div>
+
+            <div class="weapon-card" id="card-machinegun">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>重型機關槍 (Machine Gun)</h3>
+                    <button class="secondary-btn" id="unlock-machinegun" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('machinegun', 250)">解鎖 (🔑 250)</button>
+                </div>
+                <p>彈匣容量: 100 | 射速: 極快</p>
+                <p>武器說明: 超大彈匣容量，提供持續強大火力。</p>
+            </div>
+
+            <div class="weapon-card" id="card-rpg">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>火箭筒 (RPG)</h3>
+                    <button class="secondary-btn" id="unlock-rpg" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('rpg', 400)">解鎖 (🔑 400)</button>
+                </div>
+                <p>傷害: 300 | 射速: 極慢</p>
+                <p>武器說明: 一發入魂，大範圍爆炸傷害。</p>
+            </div>
+
+            <div class="weapon-card" id="card-flamethrower">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>噴火器 (Flamethrower)</h3>
+                    <button class="secondary-btn" id="unlock-flamethrower" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('flamethrower', 350)">解鎖 (🔑 350)</button>
+                </div>
+                <p>傷害: 8 (燃燒) | 射速: 極快</p>
+                <p>武器說明: 造成持續燃燒傷害，適合清理群體敵人。</p>
+            </div>
+        </div>
+
+        <button class="secondary-btn" onclick="toggleWeaponsModal(false)" style="margin-top: 10px;">返回</button>
+    </div>
+
+    <div id="instructions">
+        WASD 移動 | 滑鼠控制方向 | 左鍵攻擊
+    </div>
+
+    <script>
+        const sensSlider = document.getElementById('sensitivity-slider');
+        const sensNumber = document.getElementById('sensitivity-number');
+        const zoomSensSlider = document.getElementById('zoom-sensitivity-slider');
+        const zoomSensNumber = document.getElementById('zoom-sensitivity-number');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeValue = document.getElementById('volume-value');
+        
+        function updateSens(val, isZoom = false) {
+            const numVal = parseFloat(val);
+            if (isZoom) {
+                window.zoomSensitivity = numVal;
+                zoomSensSlider.value = numVal;
+                zoomSensNumber.value = numVal.toFixed(2);
+                localStorage.setItem('game_zoom_sensitivity', numVal);
+            } else {
+                window.gameSensitivity = numVal;
+                sensSlider.value = numVal;
+                sensNumber.value = numVal.toFixed(1);
+                localStorage.setItem('game_sensitivity', numVal);
+            }
+        }
+
+        sensSlider.addEventListener('input', (e) => updateSens(e.target.value));
+        sensNumber.addEventListener('change', (e) => updateSens(e.target.value));
+        zoomSensSlider.addEventListener('input', (e) => updateSens(e.target.value, true));
+        zoomSensNumber.addEventListener('change', (e) => updateSens(e.target.value, true));
+
+        volumeSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            volumeValue.innerText = Math.round(val * 100) + '%';
+            if (window.setGameVolume) window.setGameVolume(val);
+            localStorage.setItem('game_volume', val);
+        });
+
+        // --- Loadout 系統 ---
+        let currentLoadout = { primary: 'rifle', secondary: null, skill: null };
+
+        const weaponCats = {
+            rifle: 'primary', sniper: 'primary', shotgun: 'primary', paintball: 'primary',
+            machinegun: 'primary', rpg: 'primary', flamethrower: 'primary',
+            pistol: 'secondary', knife: 'secondary'
+        };
+
+        function selectSkill(id) {
+            currentLoadout.skill = id;
+            updateLoadoutUI();
+        }
+
+        function removeSkillFromLoadout() {
+            currentLoadout.skill = null;
+            updateLoadoutUI();
+        }
+
+        function updateLoadoutUI() {
+            const nickname = localStorage.getItem('playerNickname') || 'guest';
+            const prefix = nickname + '_';
+            const unlocked = window.getUnlockedWeapons ? window.getUnlockedWeapons() : ['rifle', 'pistol'];
+            const unlockedSkills = window.getUnlockedSkills ? window.getUnlockedSkills() : (JSON.parse(localStorage.getItem(prefix + 'game_unlocked_skills')) || []);
+            
+            const container = document.getElementById('unlocked-weapon-tags');
+            const skillContainer = document.getElementById('unlocked-skill-tags');
+            
+            const weaponNames = {
+                rifle: '自動步槍', knife: '軍用匕首', sniper: '狙擊步槍', 
+                shotgun: '散彈槍', pistol: '手槍', paintball: '漆彈槍 (BOSS)',
+                machinegun: '機關槍', rpg: '火箭筒', flamethrower: '噴火器'
+            };
+
+            const skillNames = {
+                'vampiric': '擊殺回血', 'adrenaline': '殘血爆發', 'shield': '護盾過載',
+                'scavenger': '資源加倍', 'shadow': '影子滑行', 'precision': '致命精準',
+                'berserker': '狂暴之魂', 'magnetic': '金鑰磁鐵'
+            };
+
+            container.innerHTML = '';
+            unlocked.forEach(id => {
+                const isSelected = currentLoadout.primary === id || currentLoadout.secondary === id;
+                const tag = document.createElement('div');
+                tag.className = 'weapon-tag' + (isSelected ? ' selected' : '');
+                tag.innerText = weaponNames[id] || id;
+                tag.onclick = () => addToLoadout(id);
+                container.appendChild(tag);
+            });
+
+            // 更新技能標籤
+            if (skillContainer) {
+                skillContainer.innerHTML = '';
+                unlockedSkills.forEach(id => {
+                    const isSelected = currentLoadout.skill === id;
+                    const tag = document.createElement('div');
+                    tag.className = 'weapon-tag' + (isSelected ? ' selected' : '');
+                    tag.style.borderColor = 'var(--neon-yellow)';
+                    tag.style.color = isSelected ? 'black' : 'var(--neon-yellow)';
+                    if (isSelected) tag.style.background = 'var(--neon-yellow)';
+                    tag.innerText = skillNames[id] || id;
+                    tag.onclick = () => selectSkill(id);
+                    skillContainer.appendChild(tag);
+                });
+            }
+
+            // 更新槽位顯示
+            const pSlot = document.getElementById('slot-0');
+            const sSlot = document.getElementById('slot-1');
+            const skillSlot = document.getElementById('slot-skill');
+
+            if (currentLoadout.primary) {
+                pSlot.innerHTML = `主武器<br>${weaponNames[currentLoadout.primary]}<button class="remove-btn">×</button>`;
+                pSlot.classList.add('active');
+            } else {
+                pSlot.innerHTML = `主武器<br>未選擇<button class="remove-btn">×</button>`;
+                pSlot.classList.remove('active');
+            }
+
+            if (currentLoadout.secondary) {
+                sSlot.innerHTML = `副武器<br>${weaponNames[currentLoadout.secondary]}<button class="remove-btn">×</button>`;
+                sSlot.classList.add('active');
+            } else {
+                sSlot.innerHTML = `副武器<br>未選擇<button class="remove-btn">×</button>`;
+                sSlot.classList.remove('active');
+            }
+
+            if (skillSlot) {
+                if (currentLoadout.skill) {
+                    skillSlot.innerHTML = `<span style="opacity: 0.4; font-size: 9px; color: var(--neon-yellow);">SKILL</span><span class="skill-name">${skillNames[currentLoadout.skill] || currentLoadout.skill}</span><button class="remove-btn">×</button>`;
+                    skillSlot.classList.add('active');
+                    skillSlot.style.borderColor = 'var(--neon-yellow)';
+                } else {
+                    skillSlot.innerHTML = '<span style="opacity: 0.4; font-size: 9px; color: var(--neon-yellow);">SKILL</span><span class="skill-name">未選擇</span><button class="remove-btn">×</button>';
+                    skillSlot.classList.remove('active');
+                    skillSlot.style.borderColor = '#333';
+                }
+            }
+            
+            // 同步裝備至遊戲
+            if (window.setEquippedWeapons) {
+                const list = [];
+                if (currentLoadout.primary) list.push(currentLoadout.primary);
+                if (currentLoadout.secondary) list.push(currentLoadout.secondary);
+                window.setEquippedWeapons(list);
+            }
+
+            if (window.setEquippedSkill) {
+                window.setEquippedSkill(currentLoadout.skill);
+            }
+
+            // 雙武器都選好後顯示開始按鈕
+            const startBtn = document.getElementById('start-game-btn');
+            if (currentLoadout.primary && currentLoadout.secondary) {
+                startBtn.style.display = 'block';
+            } else {
+                startBtn.style.display = 'none';
+            }
+        }
+
+        window.updateLoadoutUI = updateLoadoutUI;
+
+        function addToLoadout(id) {
+            const cat = weaponCats[id];
+            if (cat === 'primary') {
+                currentLoadout.primary = id;
+            } else {
+                currentLoadout.secondary = id;
+            }
+            updateLoadoutUI();
+        }
+
+        function removeFromLoadout(index) {
+            if (index === 0) currentLoadout.primary = null;
+            else currentLoadout.secondary = null;
+            updateLoadoutUI();
+        }
+
+        // 從本地讀取設定 (如感應度等)
+        const nickname = localStorage.getItem('playerNickname') || 'guest';
+        const prefix = nickname + '_';
+        
+        const savedSens = localStorage.getItem('game_sensitivity');
+        const savedZoomSens = localStorage.getItem('game_zoom_sensitivity');
+        const savedVolume = localStorage.getItem('game_volume');
+        const savedKeys = localStorage.getItem(prefix + 'game_keys');
+        const savedUnlocked = JSON.parse(localStorage.getItem(prefix + 'game_unlocked_weapons')) || ['rifle', 'pistol'];
+        
+        window.gameSensitivity = savedSens ? parseFloat(savedSens) : 1.0;
+        window.zoomSensitivity = savedZoomSens ? parseFloat(savedZoomSens) : 0.5;
+        const initialVolume = savedVolume ? parseFloat(savedVolume) : 0.5;
+        const initialKeys = savedKeys !== null ? parseInt(savedKeys) : 300; // 新玩家初始 300
+        
+        // 更新 UI
+        updateSens(window.gameSensitivity);
+        updateSens(window.zoomSensitivity, true);
+        volumeSlider.value = initialVolume;
+        volumeValue.innerText = Math.round(initialVolume * 100) + '%';
+        
+        // 顯示已解鎖的按鈕
+        savedUnlocked.forEach(id => {
+            const btn = document.getElementById(`unlock-${id}`);
+            if (btn) {
+                btn.innerText = '已解鎖';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            }
+        });
+        
+        // 等待遊戲初始化後同步狀態
+        setTimeout(() => {
+            if (window.setGameVolume) window.setGameVolume(initialVolume);
+            if (window.updateModalKeys) window.updateModalKeys(initialKeys);
+            updateLoadoutUI();
+        }, 800);
+
+        function startGame() {
+            if (!currentLoadout.primary && !currentLoadout.secondary) {
+                alert('請先選擇主武器與副武器！');
+                return;
+            }
+            document.getElementById('welcome-screen').style.display = 'none';
+        }
+
+        function toggleWeaponsModal(show) {
+            const modal = document.getElementById('weapons-modal');
+            modal.style.display = show ? 'flex' : 'none';
+            if (show) {
+                // 更新已擁有狀態
+                const unlocked = window.getUnlockedWeapons ? window.getUnlockedWeapons() : ['rifle'];
+                ['knife', 'sniper', 'shotgun', 'pistol'].forEach(id => {
+                    const btn = document.getElementById(`unlock-${id}`);
+                    if (btn && unlocked.includes(id)) {
+                        btn.innerText = '已擁有';
+                        btn.disabled = true;
+                        btn.style.opacity = '0.5';
+                    }
+                });
+            }
+        }
+
+        window.updateModalKeys = (count) => {
+            const elModal = document.getElementById('modal-key-count');
+            const elWelcome = document.getElementById('welcome-key-count');
+            if (elModal) elModal.innerText = count;
+            if (elWelcome) elWelcome.innerText = count;
+        };
+
+        function tryUnlock(id, cost) {
+            if (window.unlockWeapon && window.unlockWeapon(id)) {
+                const btn = document.getElementById(`unlock-${id}`);
+                if (btn) {
+                    btn.innerText = '已擁有';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                }
+                const hotkeys = { 'rifle': '1', 'knife': '2', 'sniper': '3', 'shotgun': '4', 'pistol': '5' };
+                alert(`成功解鎖 ${id}！現在可以從選單中選用該武器了。`);
+                updateLoadoutUI();
+            } else {
+                alert('金鑰不足或解鎖失敗！');
+            }
+        }
+    </script>
+    <div id="leaderboard">
+        <h3>排行榜</h3>
+        <div id="score-list"></div>
+    </div>
+    <div id="hud">
+        <div class="hud-panel">
+            <div id="current-weapon" style="font-size: 12px; color: var(--neon-blue); letter-spacing: 2px; margin-bottom: 5px; text-transform: uppercase;">RIFLE</div>
+            <div class="hp-container">
+                <span style="color: var(--neon-blue); font-weight: 900; font-size: 14px;">HP</span>
+                <div class="hp-bar-outer">
+                    <div id="hp-bar" style="width: 100%;"></div>
+                </div>
+                <span id="hp-text" style="font-weight: bold; width: 35px; text-align: right; font-size: 14px;">250</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ammo-panel">
+        <div style="font-size: 9px; opacity: 0.5; letter-spacing: 2px;">AMMO</div>
+        <span id="ammo-text">--</span><span id="max-ammo-text" style="font-size: 16px; opacity: 0.6;"> / --</span>
+    </div>
+
+    <div id="crosshair">
+        <div style="position: absolute; top: 50%; left: 50%; width: 2px; height: 14px; background: white; transform: translate(-50%, -50%);"></div>
+        <div style="position: absolute; top: 50%; left: 50%; width: 14px; height: 2px; background: white; transform: translate(-50%, -50%);"></div>
+        <div style="position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: var(--neon-blue); border-radius: 50%; transform: translate(-50%, -50%);"></div>
+    </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        window.socket = socket; // 讓 game.js 可以使用
+
+        // 顯示玩家暱稱
+        document.getElementById('player-name-display').textContent = localStorage.getItem('playerNickname') || '未知';
+    </script>
+    <script type="module" src="game.js"></script>
+</body>
+</html>
+

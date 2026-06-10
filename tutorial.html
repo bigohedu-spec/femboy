@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲教學 - 3D Survival Arena</title>
+    <script>
+        if (!localStorage.getItem('playerNickname')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #eee;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: radial-gradient(circle at center, #001515 0%, #000 100%);
+        }
+        .container {
+            max-width: 800px;
+            margin: 80px auto 40px;
+            background: rgba(0, 15, 15, 0.9);
+            padding: 50px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        h1, h2 { color: #00ffff; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; }
+        h1 { text-align: center; font-size: 2.5em; margin-bottom: 40px; text-shadow: 0 0 15px rgba(0, 255, 255, 0.4); }
+        .key {
+            display: inline-block;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #00ffff;
+            border-radius: 4px;
+            padding: 2px 10px;
+            font-family: monospace;
+            color: #00ffff;
+            margin: 2px;
+            font-weight: bold;
+        }
+        .section { margin-bottom: 40px; border-bottom: 1px solid rgba(0, 255, 255, 0.1); padding-bottom: 25px; }
+        .back-btn {
+            display: block;
+            width: 200px;
+            margin: 20px auto 0;
+            padding: 12px;
+            font-size: 14px;
+            background: #00ffff;
+            color: black;
+            text-decoration: none;
+            font-weight: 900;
+            text-align: center;
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+            transition: 0.3s;
+        }
+        .back-btn:hover { background: white; transform: scale(1.05); }
+        /* 導航列樣式 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 15px 0;
+            z-index: 1000;
+        }
+        .navbar a {
+            color: #00ffff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            transition: 0.3s;
+            opacity: 0.6;
+            letter-spacing: 2px;
+        }
+        .navbar a:hover {
+            opacity: 1;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        .navbar a.active {
+            opacity: 1;
+            color: white;
+            border-bottom: 2px solid #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html">HOME</a>
+        <a href="game.html">BATTLE</a>
+        <a href="skills.html">SKILLS</a>
+        <a href="tutorial.html" class="active">TUTORIAL</a>
+        <a href="leaderboard.html">RANKING</a>
+        <a href="credits.html">ABOUT</a>
+        <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="margin-left: auto; color: #00ffff; opacity: 0.8;">English</a>
+    </nav>
+    <script src="translations.js"></script>
+    <div class="container" style="margin-top: 80px;">
+        <h1>OPERATIONAL MANUAL</h1>
+        
+        <div class="section">
+            <h2>⌨️ 基礎控制</h2>
+            <ul>
+                <li><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span>：移動角色</li>
+                <li><span class="key">Space</span>：跳躍</li>
+                <li><span class="key">C</span>：戰術滑行 (增加移動速度並降低身位)</li>
+                <li><span class="key">R</span>：更換彈匣</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🖱️ 戰鬥操作</h2>
+            <ul>
+                <li><strong>滑鼠左鍵</strong>：開火 / 近戰攻擊</li>
+                <li><strong>滑鼠右鍵</strong>：開鏡瞄準 (狙擊槍) / 強力重擊 (匕首)</li>
+                <li><strong>背刺機制</strong>：使用匕首從敵人背後攻擊可造成極高傷害。</li>
+                <li><strong>爆頭機制</strong>：擊中敵人頭部可獲得 2.5 倍傷害加成。</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🔫 武器系統</h2>
+            <p>使用數字鍵 <span class="key">1</span> - <span class="key">5</span> 切換已解鎖的武器：</p>
+            <ul>
+                <li><strong>1. 自動步槍</strong>：均衡型，適合大多數戰鬥。</li>
+                <li><strong>2. 軍用匕首</strong>：潛行利器，背刺可秒殺。</li>
+                <li><strong>3. 狙擊步槍</strong>：單發致命，適合遠距離。</li>
+                <li><strong>4. 散彈槍</strong>：近戰王者，擴散範圍大。</li>
+                <li><strong>5. 手槍</strong>：可靠的副手武器。</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>💰 經濟與生存</h2>
+            <ul>
+                <li><strong>鑰匙 (Keys)</strong>：擊敗敵人可獲得鑰匙，用於在裝備庫解鎖新武器。</li>
+                <li><strong>補血包</strong>：擊敗敵人有機率掉落綠色光球，拾取可回復 50 HP。</li>
+                <li><strong>波次系統</strong>：每波敵人清理完畢後，下一波難度會提升。</li>
+            </ul>
+        </div>
+
+        <a href="index.html" class="back-btn">返回遊戲首頁</a>
+    </div>
+</body>
+</html>
