@@ -234,10 +234,35 @@
             { id: 'magnetic', name: 'Credit Magnet', icon: '🧲', cost: 300, desc: 'Credits and items are automatically pulled towards you from distance.' }
         ];
 
+        // 技能描述備份 (防呆用)
+        const backupDescriptions = {
+            zh: {
+                vampiric: '每擊殺一名敵人，立即回復 10 HP。',
+                adrenaline: '當血量低於 50 HP 時，移動速度提升 40%。',
+                shield: '永久提升最大生命值上限至 350 HP。',
+                scavenger: '擊殺敵人獲得的金鑰 (🔑) 獎勵翻倍。',
+                shadow: '戰術滑行 (Slide) 的冷卻時間縮短 50%。',
+                precision: '暴頭傷害倍率提升至 3.0 倍。',
+                berserker: '造成的傷害提升 50%，但無法再撿取醫療包。',
+                magnetic: '金鑰與道具會從遠處自動被吸引過來。'
+            },
+            en: {
+                vampiric: 'Restore 10 HP instantly upon every enemy elimination.',
+                adrenaline: 'Increase movement speed by 40% when health drops below 50 HP.',
+                shield: 'Permanently increases maximum HP to 350.',
+                scavenger: 'Double the amount of Credits (🔑) earned from every kill.',
+                shadow: 'Reduce Tactical Slide cooldown by 50%.',
+                precision: 'Headshot damage multiplier increased to 3.0x.',
+                berserker: 'Deal 50% more damage but you can no longer pick up health packs.',
+                magnetic: 'Credits and items are automatically pulled towards you.'
+            }
+        };
+
         function updateUI() {
             const lang = localStorage.getItem('game_lang') || 'zh';
             document.getElementById('key-display').innerText = playerKeys;
             const container = document.getElementById('skills-container');
+            if (!container) return;
             container.innerHTML = '';
 
             skillsConfig.forEach(skill => {
@@ -245,8 +270,16 @@
                 const card = document.createElement('div');
                 card.className = `skill-card ${isUnlocked ? 'unlocked' : ''}`;
                 
-                const skillName = (typeof getTranslation === 'function') ? getTranslation(lang, `s-${skill.id}`) : skill.name;
-                const skillDesc = (skillDescriptions[lang] && skillDescriptions[lang][skill.id]) || skill.desc;
+                const skillName = (typeof getTranslation === 'function') ? (getTranslation(lang, `s-${skill.id}`) || skill.name) : skill.name;
+                
+                // 優先使用 translations.js 的描述，其次使用備份，最後使用預設
+                let skillDesc = skill.desc;
+                if (typeof skillDescriptions !== 'undefined' && skillDescriptions[lang] && skillDescriptions[lang][skill.id]) {
+                    skillDesc = skillDescriptions[lang][skill.id];
+                } else if (backupDescriptions[lang] && backupDescriptions[lang][skill.id]) {
+                    skillDesc = backupDescriptions[lang][skill.id];
+                }
+
                 const statusText = (typeof getTranslation === 'function') ? getTranslation(lang, isUnlocked ? 'skill-active' : 'skill-locked') : (isUnlocked ? 'ACTIVE' : 'LOCKED');
                 const costText = isUnlocked ? ((typeof getTranslation === 'function') ? getTranslation(lang, 'skill-owned') : 'OWNED') : '🔑 ' + skill.cost;
                 const btnText = isUnlocked ? ((typeof getTranslation === 'function') ? getTranslation(lang, 'skill-aug') : 'Augmented') : ((typeof getTranslation === 'function') ? getTranslation(lang, 'skill-unlock') : 'Unlock Augment');
