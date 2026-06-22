@@ -394,7 +394,7 @@
         });
 
         // --- Loadout 系統 ---
-        let currentLoadout = { primary: 'rifle', secondary: null, skill: null };
+        let currentLoadout = { primary: 'rifle', secondary: 'pistol', skill: null };
 
         const weaponCats = {
             rifle: 'primary', sniper: 'primary', shotgun: 'primary', paintball: 'primary',
@@ -404,12 +404,12 @@
 
         function selectSkill(id) {
             currentLoadout.skill = id;
-            updateLoadoutUI();
+            if (typeof updateLoadoutUI === 'function') updateLoadoutUI();
         }
 
         function removeSkillFromLoadout() {
             currentLoadout.skill = null;
-            updateLoadoutUI();
+            if (typeof updateLoadoutUI === 'function') updateLoadoutUI();
         }
 
         function updateLoadoutUI() {
@@ -417,23 +417,28 @@
             const prefix = nickname + '_';
             const lang = localStorage.getItem('game_lang') || 'zh';
             
-            // 獲取解鎖資料，加入防呆
+            // 獲取解鎖資料
             let unlocked = ['rifle', 'pistol'];
-            if (window.getUnlockedWeapons) {
-                const gameUnlocked = window.getUnlockedWeapons();
-                if (gameUnlocked && Array.isArray(gameUnlocked)) unlocked = gameUnlocked;
-            }
+            try {
+                if (window.getUnlockedWeapons) {
+                    const gameUnlocked = window.getUnlockedWeapons();
+                    if (gameUnlocked && Array.isArray(gameUnlocked)) unlocked = gameUnlocked;
+                } else {
+                    const saved = localStorage.getItem(prefix + 'game_unlocked_weapons');
+                    if (saved) unlocked = JSON.parse(saved);
+                }
+            } catch(e) { console.error("Load weapons error:", e); }
             
             let unlockedSkills = [];
-            if (window.getUnlockedSkills) {
-                const gameSkills = window.getUnlockedSkills();
-                if (gameSkills && Array.isArray(gameSkills)) unlockedSkills = gameSkills;
-            } else {
-                try {
+            try {
+                if (window.getUnlockedSkills) {
+                    const gameSkills = window.getUnlockedSkills();
+                    if (gameSkills && Array.isArray(gameSkills)) unlockedSkills = gameSkills;
+                } else {
                     const saved = localStorage.getItem(prefix + 'game_unlocked_skills');
                     if (saved) unlockedSkills = JSON.parse(saved);
-                } catch(e) {}
-            }
+                }
+            } catch(e) { console.error("Load skills error:", e); }
             
             const container = document.getElementById('unlocked-weapon-tags');
             const skillContainer = document.getElementById('unlocked-skill-tags');
@@ -444,10 +449,12 @@
                     const isSelected = currentLoadout.primary === id || currentLoadout.secondary === id;
                     const tag = document.createElement('div');
                     tag.className = 'weapon-tag' + (isSelected ? ' selected' : '');
-                    // 確保 getTranslation 存在
-                    const displayName = (typeof getTranslation === 'function') ? getTranslation(lang, `w-${id}`) : id;
+                    const displayName = (typeof getTranslation === 'function') ? (getTranslation(lang, `w-${id}`) || id) : id;
                     tag.innerText = displayName;
-                    tag.onclick = () => addToLoadout(id);
+                    tag.onclick = (e) => {
+                        e.stopPropagation();
+                        addToLoadout(id);
+                    };
                     container.appendChild(tag);
                 });
             }
@@ -461,9 +468,12 @@
                     tag.style.borderColor = 'var(--neon-yellow)';
                     tag.style.color = isSelected ? 'black' : 'var(--neon-yellow)';
                     if (isSelected) tag.style.background = 'var(--neon-yellow)';
-                    const displayName = (typeof getTranslation === 'function') ? getTranslation(lang, `s-${id}`) : id;
+                    const displayName = (typeof getTranslation === 'function') ? (getTranslation(lang, `s-${id}`) || id) : id;
                     tag.innerText = displayName;
-                    tag.onclick = () => selectSkill(id);
+                    tag.onclick = (e) => {
+                        e.stopPropagation();
+                        selectSkill(id);
+                    };
                     skillContainer.appendChild(tag);
                 });
             }
@@ -472,26 +482,25 @@
             const pSlot = document.getElementById('slot-0');
             const sSlot = document.getElementById('slot-1');
             const skillSlot = document.getElementById('slot-skill');
-            const unselectedText = getTranslation(lang, 'game-unselected');
+            const unselectedText = (typeof getTranslation === 'function') ? getTranslation(lang, 'game-unselected') : 'EMPTY';
 
             if (pSlot) {
                 const nameEl = pSlot.querySelector('.weapon-name');
-                if (nameEl) nameEl.innerText = currentLoadout.primary ? (getTranslation(lang, `w-${currentLoadout.primary}`) || currentLoadout.primary) : unselectedText;
+                if (nameEl) nameEl.innerText = currentLoadout.primary ? ((typeof getTranslation === 'function' ? getTranslation(lang, `w-${currentLoadout.primary}`) : null) || currentLoadout.primary) : unselectedText;
                 pSlot.classList.toggle('active', !!currentLoadout.primary);
             }
 
             if (sSlot) {
                 const nameEl = sSlot.querySelector('.weapon-name');
-                if (nameEl) nameEl.innerText = currentLoadout.secondary ? (getTranslation(lang, `w-${currentLoadout.secondary}`) || currentLoadout.secondary) : unselectedText;
+                if (nameEl) nameEl.innerText = currentLoadout.secondary ? ((typeof getTranslation === 'function' ? getTranslation(lang, `w-${currentLoadout.secondary}`) : null) || currentLoadout.secondary) : unselectedText;
                 sSlot.classList.toggle('active', !!currentLoadout.secondary);
             }
 
             if (skillSlot) {
                 const nameEl = skillSlot.querySelector('.skill-name');
-                if (nameEl) nameEl.innerText = currentLoadout.skill ? (getTranslation(lang, `s-${currentLoadout.skill}`) || currentLoadout.skill) : unselectedText;
+                if (nameEl) nameEl.innerText = currentLoadout.skill ? ((typeof getTranslation === 'function' ? getTranslation(lang, `s-${currentLoadout.skill}`) : null) || currentLoadout.skill) : unselectedText;
                 skillSlot.classList.toggle('active', !!currentLoadout.skill);
-                if (currentLoadout.skill) skillSlot.style.borderColor = 'var(--neon-yellow)';
-                else skillSlot.style.borderColor = '#333';
+                skillSlot.style.borderColor = currentLoadout.skill ? 'var(--neon-yellow)' : '#333';
             }
             
             // 同步裝備至遊戲
@@ -506,12 +515,15 @@
                 window.setEquippedSkill(currentLoadout.skill);
             }
 
-            // 雙武器都選好後顯示開始按鈕
+            // 更新開始按鈕狀態
             const startBtn = document.getElementById('start-game-btn');
-            if (currentLoadout.primary && currentLoadout.secondary) {
-                startBtn.style.display = 'block';
-            } else {
-                startBtn.style.display = 'none';
+            if (startBtn) {
+                if (currentLoadout.primary || currentLoadout.secondary) {
+                    startBtn.style.opacity = '1';
+                    startBtn.disabled = false;
+                } else {
+                    startBtn.style.opacity = '0.5';
+                }
             }
         }
 
