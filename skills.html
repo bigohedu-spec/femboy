@@ -202,11 +202,11 @@
 
     <div class="container">
         <div class="header">
-            <h1>SKILL AUGMENTATION</h1>
-            <p>Enhance your operator's combat efficiency</p>
+            <h1 data-i18n="skills-title">SKILL AUGMENTATION</h1>
+            <p data-i18n="skills-subtitle">Enhance your operator's combat efficiency</p>
             
             <div class="balance-info">
-                AVAILABLE CREDITS: 🔑 <span id="key-display">300</span>
+                <span data-i18n="skills-balance">AVAILABLE CREDITS</span>: 🔑 <span id="key-display">300</span>
             </div>
         </div>
 
@@ -235,6 +235,7 @@
         ];
 
         function updateUI() {
+            const lang = localStorage.getItem('game_lang') || 'zh';
             document.getElementById('key-display').innerText = playerKeys;
             const container = document.getElementById('skills-container');
             container.innerHTML = '';
@@ -244,19 +245,30 @@
                 const card = document.createElement('div');
                 card.className = `skill-card ${isUnlocked ? 'unlocked' : ''}`;
                 
+                const skillName = (typeof getTranslation === 'function') ? getTranslation(lang, `s-${skill.id}`) : skill.name;
+                const skillDesc = (skillDescriptions[lang] && skillDescriptions[lang][skill.id]) || skill.desc;
+                const statusText = (typeof getTranslation === 'function') ? getTranslation(lang, isUnlocked ? 'skill-active' : 'skill-locked') : (isUnlocked ? 'ACTIVE' : 'LOCKED');
+                const costText = isUnlocked ? ((typeof getTranslation === 'function') ? getTranslation(lang, 'skill-owned') : 'OWNED') : '🔑 ' + skill.cost;
+                const btnText = isUnlocked ? ((typeof getTranslation === 'function') ? getTranslation(lang, 'skill-aug') : 'Augmented') : ((typeof getTranslation === 'function') ? getTranslation(lang, 'skill-unlock') : 'Unlock Augment');
+
                 card.innerHTML = `
-                    <div class="status-tag">${isUnlocked ? 'ACTIVE' : 'LOCKED'}</div>
+                    <div class="status-tag">${statusText}</div>
                     <div class="skill-icon">${skill.icon}</div>
-                    <div class="skill-name">${skill.name}</div>
-                    <div class="skill-desc">${skill.desc}</div>
-                    <div class="skill-cost">${isUnlocked ? 'OWNED' : '🔑 ' + skill.cost}</div>
+                    <div class="skill-name">${skillName}</div>
+                    <div class="skill-desc">${skillDesc}</div>
+                    <div class="skill-cost">${costText}</div>
                     <button class="unlock-btn" ${isUnlocked || playerKeys < skill.cost ? 'disabled' : ''} onclick="unlockSkill('${skill.id}', ${skill.cost})">
-                        ${isUnlocked ? 'Augmented' : 'Unlock Augment'}
+                        ${btnText}
                     </button>
                 `;
                 container.appendChild(card);
             });
         }
+
+        // 監聽語言切換
+        window.addEventListener('languageChanged', (e) => {
+            updateUI();
+        });
 
         function unlockSkill(id, cost) {
             if (playerKeys >= cost && !unlockedSkills.includes(id)) {
@@ -288,11 +300,16 @@
             // Sync with server if needed
             socket.emit('login', nickname);
             socket.on('loginSuccess', (response) => {
-                playerKeys = response.data.keys;
-                unlockedSkills = response.data.unlockedSkills || [];
-                localStorage.setItem(prefix + 'game_keys', playerKeys);
-                localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(unlockedSkills));
-                updateUI();
+                const data = response.data;
+                if (data) {
+                    playerKeys = data.keys || 300;
+                    // 處理命名不一致 (Supabase 為全小寫)
+                    unlockedSkills = data.unlockedSkills || data.unlockedskills || [];
+                    
+                    localStorage.setItem(prefix + 'game_keys', playerKeys);
+                    localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(unlockedSkills));
+                    updateUI();
+                }
             });
         };
     </script>

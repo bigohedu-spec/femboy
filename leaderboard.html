@@ -98,44 +98,44 @@
     </nav>
     <script src="translations.js"></script>
     <div class="container" style="margin-top: 80px;">
-        <h1>🏆 全球精英記分板</h1>
+        <h1 data-i18n="rank-online">🏆 全球精英記分板</h1>
         
         <table>
             <thead>
                 <tr>
-                    <th>排名</th>
-                    <th>玩家 ID</th>
-                    <th>擊殺數</th>
+                    <th data-i18n="rank-pos">排名</th>
+                    <th data-i18n="rank-id">玩家 ID</th>
+                    <th data-i18n="rank-kills">擊殺數</th>
                 </tr>
             </thead>
             <tbody id="leaderboard-body">
                 <tr>
-                    <td colspan="3" class="loading">正在連線至大廳並獲取即時數據...</td>
+                    <td colspan="3" class="loading" data-i18n="rank-loading">正在連線至大廳並獲取即時數據...</td>
                 </tr>
             </tbody>
         </table>
 
-        <div style="margin-bottom: 20px; font-size: 14px; color: #888;">
+        <div style="margin-bottom: 20px; font-size: 14px; color: #888;" data-i18n="rank-online-note">
             注意：上方僅顯示當前在線玩家。
         </div>
 
-        <h1 style="margin-top: 50px;">🌍 全球總擊殺排行 (Supabase)</h1>
+        <h1 style="margin-top: 50px;" data-i18n="rank-global">🌍 全球總擊殺排行 (Supabase)</h1>
         <table>
             <thead>
                 <tr>
-                    <th>排名</th>
-                    <th>玩家暱稱</th>
-                    <th>總擊殺數</th>
+                    <th data-i18n="rank-pos">排名</th>
+                    <th data-i18n="rank-name">玩家暱稱</th>
+                    <th data-i18n="rank-total-kills">總擊殺數</th>
                 </tr>
             </thead>
             <tbody id="global-leaderboard-body">
                 <tr>
-                    <td colspan="3" class="loading">正在讀取全球數據...</td>
+                    <td colspan="3" class="loading" data-i18n="rank-global-loading">正在讀取全球數據...</td>
                 </tr>
             </tbody>
         </table>
 
-        <a href="index.html" class="back-btn">返回遊戲首頁</a>
+        <a href="index.html" class="back-btn" data-i18n="tut-back">返回遊戲首頁</a>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

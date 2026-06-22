@@ -331,8 +331,9 @@ if (socket) {
         if (data) {
             console.log("Login sync success:", data);
             gameState.keys = data.keys || 300;
-            gameState.unlockedWeapons = data.unlockedWeapons || ['rifle', 'pistol'];
-            gameState.unlockedSkills = data.unlockedSkills || [];
+            // 處理命名不一致 (Supabase 為全小寫)
+            gameState.unlockedWeapons = data.unlockedWeapons || data.unlockedweapons || ['rifle', 'pistol'];
+            gameState.unlockedSkills = data.unlockedSkills || data.unlockedskills || [];
             
             // 同步回 localStorage
             const prefix = getPlayerPrefix();
