@@ -256,13 +256,13 @@ io.on('connection', (socket) => {
     });
 });
 
-let PORT = 3000;
+let PORT = process.env.PORT || 3000;
 
 function startServer(port) {
     server.listen(port, '0.0.0.0', () => {
         console.log('=========================================');
         console.log(`🚀 多人連線伺服器啟動成功！`);
-        console.log(`🔗 請點擊此連結進入遊戲: http://localhost:${port}`);
+        console.log(`🔗 伺服器運行端口: ${port}`);
         console.log('=========================================');
     }).on('error', (e) => {
         if (e.code === 'EADDRINUSE') {
