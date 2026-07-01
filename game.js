@@ -254,11 +254,38 @@ const weaponConfig = {
         reloadTime: 2000,
         type: 'rifle',
         cost: 350
+    },
+    energy: {
+        name: '能量手槍',
+        slot: 9,
+        damage: 15,
+        fireRate: 10,
+        color: 0x00ffff,
+        size: [0.08, 0.12, 0.3],
+        pos: [0.3, -0.2, -0.4],
+        spread: 0,
+        ammo: Infinity,
+        type: 'pistol',
+        cost: 150
+    },
+    glass: {
+        name: '玻璃槍',
+        slot: 10,
+        damage: 1000000000,
+        fireRate: 3000,
+        color: 0xffffff,
+        size: [0.1, 0.1, 1.5],
+        pos: [0.3, -0.3, -0.8],
+        spread: 0,
+        ammo: 1000,
+        reloadTime: 5000,
+        type: 'rifle',
+        cost: 10000
     }
 };
 
 const weaponSlots = [
-    ['rifle', 'knife', 'sniper', 'shotgun', 'pistol', 'paintball', 'machinegun', 'rpg', 'flamethrower']
+    ['rifle', 'knife', 'sniper', 'shotgun', 'pistol', 'paintball', 'machinegun', 'rpg', 'flamethrower', 'energy', 'glass']
 ];
 
 const items = []; // 存放血包與掉落物
@@ -922,9 +949,9 @@ function createEnemy(x, z, type = 'normal') {
 
 function createPlaceholder(type) {
     const p = new THREE.Group();
-    let color = 0x555555;
-    if (type === 'elite') color = 0xffffff;
-    if (type === 'boss') color = 0xff00ff; // BOSS 是紫色
+    let color = 0x0000ff; // 普通敵人改為藍色
+    if (type === 'elite') color = 0x00ffff; // 精英改為青藍色
+    if (type === 'boss') color = 0x00008b; // BOSS 改為深藍色
     
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: color }));
     body.position.y = 0.8;
@@ -941,11 +968,15 @@ function applyModelToGroup(container, type) {
     
     if (type === 'elite') {
         model.traverse(node => {
-            if (node.isMesh) node.material.color.setHex(0xffffff);
+            if (node.isMesh) node.material.color.setHex(0x00ffff); // 精英藍
         });
     } else if (type === 'boss') {
         model.traverse(node => {
-            if (node.isMesh) node.material.color.setHex(0xff00ff);
+            if (node.isMesh) node.material.color.setHex(0x00008b); // 深藍
+        });
+    } else {
+        model.traverse(node => {
+            if (node.isMesh) node.material.color.setHex(0x0000ff); // 普通藍
         });
     }
 
@@ -1284,7 +1315,7 @@ function performRaycast(config, isRightClick) {
 
                             // 技能效果：Vampiric (擊殺回血)
                             if (gameState.equippedSkill === 'vampiric') {
-                                gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 10);
+                                gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 50);
                             }
 
                             saveGameProgress();
@@ -1665,7 +1696,7 @@ function animate() {
 
                         // 技能效果：Vampiric (擊殺回血)
                         if (gameState.equippedSkill === 'vampiric') {
-                            gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 10);
+                            gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 50);
                         }
 
                         gameState.kills++;

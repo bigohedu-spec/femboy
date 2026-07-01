@@ -349,7 +349,23 @@
                 <p>傷害: 8 (燃燒) | 射速: 極快</p>
                 <p>武器說明: 造成持續燃燒傷害，適合清理群體敵人。</p>
             </div>
-        </div>
+
+            <div class="weapon-card" id="card-energy">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>能量手槍 (Energy Pistol)</h3>
+                    <button class="secondary-btn" id="unlock-energy" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('energy', 150)">解鎖 (🔑 150)</button>
+                </div>
+                <p>傷害: 20 | 子彈: 無限</p>
+                <p>武器說明: 現代科技結晶，無需更換彈匣。射速穩定且精準。</p>
+            </div>
+            <div class="weapon-card" id="card-glass">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>玻璃槍 (Glass Cannon)</h3>
+                    <button class="secondary-btn" id="unlock-glass" style="margin: 0; padding: 5px 10px;" onclick="tryUnlock('glass', 10000)">解鎖 (🔑 10000)</button>
+                </div>
+                <p>傷害: 1,000,000,000 | 射速: 極慢</p>
+                <p>武器說明: 終極武器。雖然脆弱且射速極慢，但能摧毀任何存在的實體。</p>
+            </div>        </div>
 
         <button class="secondary-btn" onclick="toggleWeaponsModal(false)" style="margin-top: 10px;">返回</button>
     </div>
@@ -610,7 +626,7 @@
             if (show) {
                 // 更新已擁有狀態
                 const unlocked = window.getUnlockedWeapons ? window.getUnlockedWeapons() : ['rifle'];
-                ['knife', 'sniper', 'shotgun', 'pistol'].forEach(id => {
+                ['knife', 'sniper', 'shotgun', 'pistol', 'paintball', 'machinegun', 'rpg', 'flamethrower', 'energy', 'glass'].forEach(id => {
                     const btn = document.getElementById(`unlock-${id}`);
                     if (btn && unlocked.includes(id)) {
                         btn.innerText = '已擁有';

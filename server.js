@@ -49,74 +49,74 @@ io.on('connection', (socket) => {
         
         let playerData = null;
 
+        // 1. 優先嘗試從本地 JSON 載入基礎資料
+        if (oldPlayerData[nickname]) {
+            const oldData = oldPlayerData[nickname];
+            playerData = {
+                nickname: nickname,
+                keys: oldData.keys || 300,
+                unlockedweapons: oldData.unlockedWeapons || ['rifle', 'pistol'],
+                unlockedskills: oldData.unlockedSkills || []
+            };
+        }
+
+        // 2. 如果有 Supabase，嘗試從雲端同步
         if (supabase) {
             try {
-                // 1. 優先從 Supabase 讀取現有資料
+                // 讀取雲端現有資料
                 const { data: cloudData } = await supabase
                     .from('players')
                     .select('*')
                     .eq('nickname', nickname)
                     .single();
                 
-                playerData = cloudData;
-
-                // 2. 檢查舊檔案是否需要強制覆蓋雲端
-                if (oldPlayerData[nickname]) {
-                    const oldData = oldPlayerData[nickname];
-                    // 條件：雲端沒人，或者舊檔案的金鑰/武器更多
+                if (cloudData) {
+                    // 如果雲端有資料，檢查是否需要從本地遷移 (以金鑰或武器數量判斷)
                     const shouldMigrate = !playerData || 
-                        (oldData.keys > (playerData.keys || 0)) || 
-                        (oldData.unlockedWeapons?.length > (playerData.unlockedweapons?.length || 0));
+                        (playerData.keys > (cloudData.keys || 0)) || 
+                        (playerData.unlockedweapons?.length > (cloudData.unlockedWeapons?.length || cloudData.unlockedweapons?.length || 0));
 
-                    if (shouldMigrate) {
+                    if (shouldMigrate && playerData) {
                         console.log(`[遷移] 正在將 ${nickname} 的本地資料同步至雲端...`);
-                        const migrationSource = {
-                            nickname: nickname,
-                            keys: oldData.keys || 300,
-                            unlockedweapons: oldData.unlockedWeapons || ['rifle', 'pistol'],
-                            unlockedskills: oldData.unlockedSkills || []
-                        };
-
                         const { data: upsertedData, error: upsertError } = await supabase
                             .from('players')
-                            .upsert([migrationSource])
+                            .upsert([{
+                                nickname: nickname,
+                                keys: playerData.keys,
+                                unlockedweapons: playerData.unlockedweapons,
+                                unlockedskills: playerData.unlockedskills
+                            }])
                             .select()
                             .single();
 
                         if (!upsertError) {
                             playerData = upsertedData;
                             console.log(`[成功] ${nickname} 資料同步完成！`);
-                        } else {
-                            console.error('[失敗] 同步雲端錯誤:', upsertError);
                         }
+                    } else {
+                        // 否則以雲端資料為準
+                        playerData = cloudData;
                     }
+                } else if (playerData) {
+                    // 雲端沒資料但本地有，直接上傳本地資料
+                    const { data: insertedData } = await supabase
+                        .from('players')
+                        .insert([{
+                            nickname: nickname,
+                            keys: playerData.keys,
+                            unlockedweapons: playerData.unlockedweapons,
+                            unlockedskills: playerData.unlockedskills
+                        }])
+                        .select()
+                        .single();
+                    if (insertedData) playerData = insertedData;
                 }
             } catch (e) {
-                console.error('Supabase 流程錯誤:', e);
+                console.error('Supabase 同步錯誤:', e);
             }
         }
 
         // 3. 如果依然沒資料 (完全的新玩家)
-        if (!playerData && supabase) {
-            try {
-                const newData = {
-                    nickname: nickname,
-                    keys: 300,
-                    unlockedweapons: ['rifle', 'pistol'],
-                    unlockedskills: []
-                };
-                const { data: insertedData } = await supabase
-                    .from('players')
-                    .insert([newData])
-                    .select()
-                    .single();
-                playerData = insertedData;
-            } catch (e) {
-                console.error('建立新玩家失敗:', e);
-            }
-        }
-
-        // 4. 如果 Supabase 失敗或未設定，回退到記憶體模式 (非持久化)
         if (!playerData) {
             playerData = {
                 nickname: nickname,
@@ -124,12 +124,30 @@ io.on('connection', (socket) => {
                 unlockedweapons: ['rifle', 'pistol'],
                 unlockedskills: []
             };
+            
+            // 如果有 Supabase，在雲端建立新玩家
+            if (supabase) {
+                try {
+                    const { data: insertedData } = await supabase
+                        .from('players')
+                        .insert([playerData])
+                        .select()
+                        .single();
+                    if (insertedData) playerData = insertedData;
+                } catch (e) {
+                    console.error('建立雲端新玩家失敗:', e);
+                }
+            }
         }
         
-        // 將存檔發送回客戶端
+        // 將存檔發送回客戶端 (確保欄位名稱相容性)
         socket.emit('loginSuccess', {
             nickname: nickname,
-            data: playerData
+            data: {
+                ...playerData,
+                unlockedSkills: playerData.unlockedskills || [],
+                unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol']
+            }
         });
 
         // 綁定暱稱到連線物件
@@ -140,7 +158,25 @@ io.on('connection', (socket) => {
 
     // 處理進度儲存
     socket.on('saveProgress', async (data) => {
-        if (data.nickname && supabase) {
+        if (!data.nickname) return;
+
+        // 1. 更新本地資料 (即使沒有 Supabase 也能持久化)
+        const updateData = {
+            keys: data.keys,
+            unlockedWeapons: data.unlockedWeapons || ['rifle', 'pistol'],
+            unlockedSkills: data.unlockedSkills || []
+        };
+        
+        oldPlayerData[data.nickname] = updateData;
+
+        try {
+            fs.writeFileSync(DATA_FILE, JSON.stringify(oldPlayerData, null, 2));
+        } catch (e) {
+            console.error('儲存本地存檔失敗:', e);
+        }
+
+        // 2. 如果有 Supabase，同步到雲端
+        if (supabase) {
             try {
                 const { error } = await supabase
                     .from('players')

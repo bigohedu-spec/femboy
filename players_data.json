@@ -1,6 +1,6 @@
 {
   "wesleygogo999": {
-    "keys": 5820,
+    "keys": 1740,
     "unlockedWeapons": [
       "rifle",
       "knife",
@@ -10,7 +10,17 @@
       "paintball",
       "machinegun",
       "rpg",
-      "flamethrower"
+      "flamethrower",
+      "energy"
+    ],
+    "unlockedSkills": [
+      "scavenger",
+      "shadow",
+      "precision",
+      "magnetic",
+      "berserker",
+      "vampiric",
+      "adrenaline"
     ]
   },
   "dfdsfadfd": {

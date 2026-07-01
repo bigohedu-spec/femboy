@@ -224,7 +224,7 @@
         let unlockedSkills = JSON.parse(localStorage.getItem(prefix + 'game_unlocked_skills')) || [];
 
         const skillsConfig = [
-            { id: 'vampiric', name: 'Vampiric Strike', icon: '🩸', cost: 500, desc: 'Restore 10 HP instantly upon every enemy elimination.' },
+            { id: 'vampiric', name: 'Vampiric Strike', icon: '🩸', cost: 500, desc: 'Restore 50 HP instantly upon every enemy elimination.' },
             { id: 'adrenaline', name: 'Adrenaline Rush', icon: '⚡', cost: 800, desc: 'Increase movement speed by 40% when health drops below 50 HP.' },
             { id: 'shield', name: 'Shield Overload', icon: '🛡️', cost: 600, desc: 'Permanently increases maximum HP to 350.' },
             { id: 'scavenger', name: 'Master Scavenger', icon: '💰', cost: 1000, desc: 'Double the amount of Credits (🔑) earned from every kill.' },
@@ -237,7 +237,7 @@
         // 技能描述備份 (防呆用)
         const backupDescriptions = {
             zh: {
-                vampiric: '每擊殺一名敵人，立即回復 10 HP。',
+                vampiric: '每擊殺一名敵人，立即回復 50 HP。',
                 adrenaline: '當血量低於 50 HP 時，移動速度提升 40%。',
                 shield: '永久提升最大生命值上限至 350 HP。',
                 scavenger: '擊殺敵人獲得的金鑰 (🔑) 獎勵翻倍。',
@@ -247,7 +247,7 @@
                 magnetic: '金鑰與道具會從遠處自動被吸引過來。'
             },
             en: {
-                vampiric: 'Restore 10 HP instantly upon every enemy elimination.',
+                vampiric: 'Restore 50 HP instantly upon every enemy elimination.',
                 adrenaline: 'Increase movement speed by 40% when health drops below 50 HP.',
                 shield: 'Permanently increases maximum HP to 350.',
                 scavenger: 'Double the amount of Credits (🔑) earned from every kill.',

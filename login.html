@@ -113,16 +113,20 @@
 </head>
 <body>
     <div class="login-container">
-        <h1>LOGIN</h1>
-        <div class="subtitle">Enter the 3D Survival Arena</div>
+        <h1 data-i18n="login-title">LOGIN</h1>
+        <div class="subtitle" data-i18n="login-desc">Enter the 3D Survival Arena</div>
         
         <form id="loginForm">
             <div class="input-group">
-                <label for="nickname">OPERATOR NICKNAME</label>
-                <input type="text" id="nickname" placeholder="ENTER NAME..." required maxlength="15" autocomplete="off">
+                <label for="nickname" data-i18n="login-input">OPERATOR NICKNAME</label>
+                <input type="text" id="nickname" data-i18n="login-input" placeholder="ENTER NAME..." required maxlength="15" autocomplete="off">
             </div>
-            <button type="submit" class="login-btn">ACCESS SYSTEM</button>
+            <button type="submit" class="login-btn" data-i18n="login-btn">ACCESS SYSTEM</button>
         </form>
+        
+        <div style="margin-top: 20px;">
+            <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="color: #00ffff; text-decoration: none; font-size: 0.8em; opacity: 0.8;">English</a>
+        </div>
 
         <div class="footer-note">
             PRIVATE ACCESS • NO PASSWORD REQUIRED
@@ -130,6 +134,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="translations.js"></script>
     <script>
         const socket = io();
         let isRedirecting = false;

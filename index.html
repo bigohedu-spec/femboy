@@ -212,7 +212,6 @@
     </style>
 </head>
 <body>
-    <div class="bg-animation" id="bg-stars"></div>
     <nav class="navbar">
         <a href="index.html" class="active">HOME</a>
         <a href="game.html">BATTLE</a>
@@ -222,7 +221,10 @@
         <a href="credits.html">ABOUT</a>
         <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="margin-left: auto; color: var(--neon-yellow); opacity: 0.8;">English</a>
     </nav>
+    <script src="/socket.io/socket.io.js"></script>
     <script src="translations.js"></script>
+
+    <div class="bg-animation" id="bg-stars"></div>
     <div class="menu-container">
         <div class="corner-br"></div>
         <div class="corner-bl"></div>
