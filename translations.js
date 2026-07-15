@@ -22,7 +22,7 @@
         'w-machinegun': '機關槍',
         'w-rpg': '火箭筒',
         'w-flamethrower': '噴火器',
-        'w-energy': '能量手槍',
+        'w-energy': '誠諒手槍',
         'w-glass': '玻璃槍',
         's-vampiric': '擊殺回血',
         's-adrenaline': '殘血爆發',

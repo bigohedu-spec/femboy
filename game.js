@@ -256,9 +256,9 @@ const weaponConfig = {
         cost: 350
     },
     energy: {
-        name: '能量手槍',
+        name: '誠諒手槍',
         slot: 9,
-        damage: 15,
+        damage: 3,
         fireRate: 10,
         color: 0x00ffff,
         size: [0.08, 0.12, 0.3],
@@ -322,7 +322,14 @@ if (socket) {
     });
 
     socket.on('playerFired', (data) => {
-        createTracer(new THREE.Vector3().copy(data.start), new THREE.Vector3().copy(data.end), data.color);
+        const start = new THREE.Vector3(data.start.x, data.start.y, data.start.z);
+        const end = new THREE.Vector3(data.end.x, data.end.y, data.end.z);
+        
+        if (data.isBurn) {
+            createFlame(start, end);
+        } else {
+            createTracer(start, end, data.color);
+        }
     });
 
     socket.on('hpUpdate', (data) => {
@@ -565,6 +572,7 @@ function createBoundaries() {
         const wall = new THREE.Mesh(new THREE.BoxGeometry(...s.size), wallMat);
         wall.position.set(...s.pos);
         scene.add(wall);
+        obstacles.push(wall); // 將邊界牆加入障礙物列表，確保能被子彈射中
     });
 }
 createBoundaries();
@@ -1186,6 +1194,54 @@ function createTracer(start, end, color = 0xffff00) {
     }, 100);
 }
 
+// 噴火槍專用的火焰效果
+function createFlame(start, end) {
+    const distance = start.distanceTo(end);
+    const numParticles = 6;
+    
+    for (let i = 0; i < numParticles; i++) {
+        const size = 0.3 + Math.random() * 0.6;
+        const geo = new THREE.SphereGeometry(size, 8, 8);
+        const mat = new THREE.MeshBasicMaterial({ 
+            color: Math.random() > 0.3 ? 0xff4500 : 0xffa500, 
+            transparent: true, 
+            opacity: 0.8 
+        });
+        const flame = new THREE.Mesh(geo, mat);
+        
+        // 隨機分布在射線路徑上，偏向近距離以呈現「噴射」感
+        const t = Math.pow(Math.random(), 0.5); 
+        flame.position.lerpVectors(start, end, t);
+        
+        // 加入隨機擾動
+        flame.position.x += (Math.random() - 0.5) * 1.2;
+        flame.position.y += (Math.random() - 0.5) * 1.2;
+        flame.position.z += (Math.random() - 0.5) * 1.2;
+        
+        scene.add(flame);
+        
+        const startTime = performance.now();
+        const duration = 300 + Math.random() * 400;
+        
+        const animateFlame = () => {
+            const elapsed = performance.now() - startTime;
+            const progress = elapsed / duration;
+            if (progress < 1) {
+                flame.scale.setScalar(1 + progress * 1.5); // 火焰噴出後會稍微變大
+                flame.material.opacity = 0.8 * (1 - progress);
+                // 向上飄一點點
+                flame.position.y += 0.02;
+                requestAnimationFrame(animateFlame);
+            } else {
+                scene.remove(flame);
+                geo.dispose();
+                mat.dispose();
+            }
+        };
+        animateFlame();
+    }
+}
+
 function performRaycast(config, isRightClick) {
     const spread = config.spread || 0;
     const isShotgun = config.type === 'shotgun';
@@ -1197,37 +1253,44 @@ function performRaycast(config, isRightClick) {
     const camWorldPos = new THREE.Vector3();
     camera.getWorldPosition(camWorldPos);
     
-    const camWorldDir = new THREE.Vector3();
-    camera.getWorldDirection(camWorldDir);
-
-    // 計算視覺軌跡起點 (優化對齊中心)
+    // 計算視覺軌跡起點 (優化對齊中心，減少視差)
     const tracerStart = new THREE.Vector3();
     if (currentWeaponMesh) {
         currentWeaponMesh.getWorldPosition(tracerStart);
-        // 為了減輕視差感，讓起點向攝影機中心移動 80%
-        tracerStart.lerp(camWorldPos, 0.8);
+        // 如果正在開鏡 (ADS)，讓子彈稍微從攝影機中心下方一點點發出 (lerp 0.95)，
+        // 這樣就不會因為距離太近而被攝影機自己擋住導致消失。
+        const lerpFactor = gameState.isZoomed ? 0.95 : 0.9;
+        tracerStart.lerp(camWorldPos, lerpFactor);
     } else {
         tracerStart.copy(camWorldPos);
     }
 
-    const targets = [...enemies, floor, ...Object.values(otherPlayers)];
+    // 定義命中目標與爆炸位置
+    const targets = [...enemies, floor, ...obstacles, ...Object.values(otherPlayers)];
     let explosionPos = null;
 
+    // 固定彈道偏移值為 0.25
+    const yOffset = 0.25;
+
     for (let i = 0; i < numRays; i++) {
-        let finalDir = camWorldDir.clone();
-        
-        if (i > 0 || isShotgun) {
-            // 擴散邏輯
+        // 使用 setFromCamera 並加入使用者自定義的偏移量
+        if (i === 0 && !isShotgun) {
+            raycaster.setFromCamera({ x: 0, y: yOffset }, camera);
+        } else {
+            // 對於散彈槍或有擴散的情況，手動計算方向
+            const camWorldDir = new THREE.Vector3();
+            camera.getWorldDirection(camWorldDir);
+            let finalDir = camWorldDir.clone();
+            
             const scatter = new THREE.Vector3(
                 (Math.random() - 0.5) * spread * 2,
                 (Math.random() - 0.5) * spread * 2,
                 (Math.random() - 0.5) * spread * 2
             );
             finalDir.add(scatter).normalize();
+            raycaster.set(camWorldPos, finalDir);
         }
 
-        // 使用絕對前進方向，不再依賴 Vector2 映射
-        raycaster.set(camWorldPos, finalDir);
         const intersects = raycaster.intersectObjects(targets, true);
 
         let tracerEnd = new THREE.Vector3();
@@ -1342,9 +1405,20 @@ function performRaycast(config, isRightClick) {
                 const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
                 color = colors[Math.floor(Math.random() * colors.length)];
             }
-            createTracer(tracerStart, tracerEnd, color);
+            
+            if (config.isBurn) {
+                createFlame(tracerStart, tracerEnd);
+            } else {
+                createTracer(tracerStart, tracerEnd, color);
+            }
+
             if (socket) {
-                socket.emit('playerFire', { start: tracerStart, end: tracerEnd, color: color });
+                socket.emit('playerFire', { 
+                    start: tracerStart, 
+                    end: tracerEnd, 
+                    color: color,
+                    isBurn: config.isBurn 
+                });
             }
         }
     }
@@ -1672,11 +1746,14 @@ function animate() {
             const dist = enemy.position.distanceTo(camera.position);
             enemy.lookAt(camera.position.x, 0, camera.position.z);
 
-            // NPC 移動邏輯：朝玩家靠近
+            // NPC 移動邏輯：朝玩家靠近 (只在水平面移動)
             if (dist > 5 && dist < 100) {
                 const moveDir = new THREE.Vector3();
-                moveDir.subVectors(camera.position, enemy.position).normalize();
-                enemy.position.addScaledVector(moveDir, 12.0 * delta); // 移動速度由 5 加快到 12
+                // 只取玩家的 X 和 Z 坐標，忽略高度 (Y)，防止敵人因為玩家變大或跳躍而飛起來
+                const targetPos = new THREE.Vector3(camera.position.x, enemy.position.y, camera.position.z);
+                moveDir.subVectors(targetPos, enemy.position).normalize();
+                enemy.position.addScaledVector(moveDir, 12.0 * delta); 
+                enemy.position.y = 0; // 強制固定在地面
             }
 
             // 處理燃燒傷害 (DOT)
@@ -1721,10 +1798,10 @@ function animate() {
                 }
             }
 
-            // 讓血量條始終面對玩家
+            // 讓血量條始終面對玩家 (使用 lookAt 確保 Y 軸也對齊)
             const hpBarBg = enemy.getObjectByName("hpBarBg");
             if (hpBarBg) {
-                hpBarBg.quaternion.copy(camera.quaternion);
+                hpBarBg.lookAt(camera.position);
             }
 
             if (dist < enemy.userData.attackRange) {

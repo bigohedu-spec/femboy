@@ -203,21 +203,52 @@ io.on('connection', (socket) => {
         rotation: { y: 0 },
         hp: 250,
         score: 0,
-        weapon: 'rifle'
+        weapon: 'rifle',
+        room: 'global' // 預設在大廳
     };
 
-    // 發送現有玩家給新玩家
-    socket.emit('currentPlayers', players);
+    // 處理加入房間 (單挑模式)
+    socket.on('joinDuel', (roomCode) => {
+        const room = roomCode || 'global';
+        
+        // 檢查房間人數 (如果是單挑模式，限制 2 人)
+        if (room !== 'global') {
+            const roomSize = io.sockets.adapter.rooms.get(room)?.size || 0;
+            if (roomSize >= 2) {
+                socket.emit('duelError', '房間已滿 (最多 2 人)');
+                return;
+            }
+        }
 
-    // 廣播新玩家給其他玩家
-    socket.broadcast.emit('newPlayer', players[socket.id]);
+        // 離開舊房間
+        const oldRoom = players[socket.id].room;
+        socket.leave(oldRoom);
+        
+        // 加入新房間
+        socket.join(room);
+        players[socket.id].room = room;
+        
+        console.log(`Player ${socket.id} joined room: ${room}`);
+
+        // 發送房間內的玩家給該玩家
+        const roomPlayers = {};
+        Object.keys(players).forEach(id => {
+            if (players[id].room === room) roomPlayers[id] = players[id];
+        });
+        socket.emit('currentPlayers', roomPlayers);
+
+        // 廣播給房間內其他人
+        socket.to(room).emit('newPlayer', players[socket.id]);
+        socket.emit('duelJoined', room);
+    });
 
     // 處理位置更新
     socket.on('playerMovement', (movementData) => {
         if (players[socket.id]) {
+            const room = players[socket.id].room;
             players[socket.id].position = movementData.position;
             players[socket.id].rotation = movementData.rotation;
-            socket.broadcast.emit('playerMoved', players[socket.id]);
+            socket.to(room).emit('playerMoved', players[socket.id]);
         }
     });
 
@@ -226,20 +257,22 @@ io.on('connection', (socket) => {
         const targetId = data.targetId;
         const damage = data.damage;
         if (players[targetId]) {
+            const room = players[socket.id].room;
             players[targetId].hp -= damage;
             if (players[targetId].hp <= 0) {
                 players[targetId].hp = 150; // 復活
                 if (players[socket.id]) players[socket.id].score += 1;
-                io.emit('playerDeath', { victimId: targetId, killerId: socket.id, players: players });
+                io.to(room).emit('playerDeath', { victimId: targetId, killerId: socket.id, players: players });
             } else {
-                io.emit('hpUpdate', { id: targetId, hp: players[targetId].hp });
+                io.to(room).emit('hpUpdate', { id: targetId, hp: players[targetId].hp });
             }
         }
     });
 
     // 處理射擊
     socket.on('playerFire', (fireData) => {
-        socket.broadcast.emit('playerFired', {
+        const room = players[socket.id].room;
+        socket.to(room).emit('playerFired', {
             id: socket.id,
             ...fireData
         });

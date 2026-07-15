@@ -250,6 +250,28 @@
             </div>
         </div>
 
+        <!-- 單挑模式區域 -->
+        <div class="loadout-container" style="margin-bottom: 25px; min-width: 490px;">
+            <div style="color: var(--neon-red); font-size: 11px; margin-bottom: 12px; font-weight: bold; letter-spacing: 2px;">1V1 PRIVATE DUEL</div>
+            <div style="display: flex; flex-direction: column; gap: 15px; align-items: center; justify-content: center;">
+                <!-- 第一行：創造房間 -->
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span style="font-size: 10px; opacity: 0.7;">NO CODE?</span>
+                    <button class="secondary-btn" onclick="createNewDuel()" style="border-color: var(--neon-blue); color: var(--neon-blue); margin: 0; padding: 8px 20px;">CREATE NEW DUEL</button>
+                </div>
+                
+                <div style="width: 50%; height: 1px; background: rgba(255,255,255,0.1);"></div>
+
+                <!-- 第二行：加入房間 -->
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="room-code-input" placeholder="PASTE CODE HERE" style="background: rgba(0,0,0,0.5); border: 1px solid var(--neon-red); color: white; padding: 8px; text-align: center; width: 150px; outline: none;">
+                    <button class="secondary-btn" onclick="joinDuelByInput()" style="border-color: var(--neon-red); color: var(--neon-red); margin: 0; padding: 8px 20px;">JOIN BY CODE</button>
+                </div>
+                
+                <div id="room-status" style="font-size: 11px; color: #888; margin-top: 5px;">STATUS: PUBLIC SERVER</div>
+            </div>
+        </div>
+
         <button class="start-btn" id="start-game-btn" onclick="startGame()">INITIATE COMBAT</button>
         
         <div style="margin-top: 20px; display: flex; gap: 20px; font-size: 10px; opacity: 0.3; letter-spacing: 2px;">
@@ -699,6 +721,33 @@
     <script>
         const socket = io();
         window.socket = socket; // 讓 game.js 可以使用
+
+        // 1. 創造全新房間
+        function createNewDuel() {
+            const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            document.getElementById('room-code-input').value = randomCode;
+            socket.emit('joinDuel', randomCode);
+        }
+
+        // 2. 透過輸入碼加入房間
+        function joinDuelByInput() {
+            const code = document.getElementById('room-code-input').value.trim();
+            if (!code) {
+                alert('請貼上或輸入邀請碼！');
+                return;
+            }
+            socket.emit('joinDuel', code);
+        }
+
+        socket.on('duelJoined', (room) => {
+            document.getElementById('room-status').innerText = `STATUS: IN ROOM [${room}]`;
+            document.getElementById('room-status').style.color = 'var(--neon-red)';
+            alert(`成功進入房間：${room}\n現在開始遊戲將只會遇到房間內的對手。`);
+        });
+
+        socket.on('duelError', (msg) => {
+            alert(msg);
+        });
 
         // 顯示玩家暱稱
         document.getElementById('player-name-display').textContent = localStorage.getItem('playerNickname') || '未知';
