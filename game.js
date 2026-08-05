@@ -63,7 +63,7 @@ const gameState = {
     wave: 1,
     kills: 0,
     xp: 0,
-    level: 50,
+    level: 1,
     keys: 300,
     coins: 300,
     unlockedWeapons: ['rifle', 'pistol'],
@@ -95,10 +95,14 @@ setTimeout(() => {
     gameState.owned_items = getSavedOwnedItems();
     gameState.weaponKills = getSavedWeaponKills();
     
-    // 強制給予 50 等獎勵
-    if (!gameState.unlockedWeapons.includes('energy_rifle')) gameState.unlockedWeapons.push('energy_rifle');
-    if (!gameState.unlockedSkills.includes('timestop')) gameState.unlockedSkills.push('timestop');
-    gameState.level = 50;
+    // 只有特定帳號強制給予 50 等與獎勵
+    const currentNickname = localStorage.getItem('playerNickname');
+    if (currentNickname === 'wesleygogo999') {
+        if (!gameState.unlockedWeapons.includes('energy_rifle')) gameState.unlockedWeapons.push('energy_rifle');
+        if (!gameState.unlockedSkills.includes('timestop')) gameState.unlockedSkills.push('timestop');
+        gameState.level = 50;
+    }
+    
     saveGameProgress();
     
     console.log("Game state synchronized from storage");
@@ -122,8 +126,11 @@ const getSavedXP = () => {
 };
 
 const getSavedLevel = () => {
+    const currentNickname = localStorage.getItem('playerNickname');
+    if (currentNickname === 'wesleygogo999') return 50;
+    
     const saved = localStorage.getItem(getPlayerPrefix() + 'game_level');
-    return 50; // 強制設定為 50 等
+    return saved ? parseInt(saved) : 1;
 };
 
 const getSavedCoins = () => {
