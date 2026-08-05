@@ -144,6 +144,12 @@
         const body = document.getElementById('leaderboard-body');
         const globalBody = document.getElementById('global-leaderboard-body');
 
+        // 自動同步登入狀態
+        const nickname = localStorage.getItem('playerNickname');
+        if (nickname) {
+            socket.emit('login', nickname);
+        }
+
         // 請求全球數據
         socket.emit('getGlobalLeaderboard');
 

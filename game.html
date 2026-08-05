@@ -1353,6 +1353,12 @@
         const socket = io();
         window.socket = socket; // 讓 game.js 可以使用
 
+        // 自動同步登入狀態
+        const nickname = localStorage.getItem('playerNickname');
+        if (nickname) {
+            socket.emit('login', nickname);
+        }
+
         // 1. 創造全新房間
         function createNewDuel() {
             const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();

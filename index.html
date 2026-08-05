@@ -332,6 +332,15 @@
     </nav>
     <script src="/socket.io/socket.io.js"></script>
     <script src="translations.js"></script>
+    <script>
+        // 初始化 Socket 並同步登入狀態
+        const socket = typeof io !== 'undefined' ? io() : null;
+        const currentNickname = localStorage.getItem('playerNickname') || 'guest';
+        
+        if (socket && currentNickname !== 'guest') {
+            socket.emit('login', currentNickname);
+        }
+    </script>
 
     <div class="bg-animation" id="bg-stars"></div>
     <div class="menu-container">
@@ -371,8 +380,7 @@
             bg.appendChild(star);
         }
 
-        // 從本地存儲獲取與暱稱綁定的進度
-        const currentNickname = localStorage.getItem('playerNickname') || 'guest';
+        // 從本地存儲獲取與暱稱綁定的進度 (currentNickname 已在上方定義)
         const savedKeysRaw = localStorage.getItem(currentNickname + '_game_keys');
         const savedKeys = savedKeysRaw !== null ? savedKeysRaw : '300';
         const savedCoinsRaw = localStorage.getItem(currentNickname + '_game_coins');
