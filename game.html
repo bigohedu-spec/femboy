@@ -121,7 +121,7 @@
         }
         .navbar a {
             color: var(--neon-blue); text-decoration: none; font-size: 13px; font-weight: bold;
-            letter-spacing: 2px; opacity: 0.6; transition: 0.3s;
+            letter-spacing: 2px; opacity: 0.9; transition: 0.3s;
         }
         .navbar a:hover, .navbar a.active { opacity: 1; text-shadow: 0 0 10px var(--neon-blue); }
 
@@ -146,13 +146,13 @@
             top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 450px; 
             max-height: 80vh;
-            background: rgba(0, 10, 10, 0.95);
-            border: 1px solid var(--neon-blue);
+            background: rgba(0, 15, 15, 0.98);
+            border: 2px solid var(--neon-blue);
             padding: 25px; z-index: 2000;
             display: none; flex-direction: column;
             border-radius: 8px;
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
-            backdrop-filter: blur(15px);
+            box-shadow: 0 0 60px rgba(0, 255, 255, 0.3);
+            backdrop-filter: blur(20px);
         }
         .weapon-list-scroll {
             overflow-y: auto;
@@ -174,6 +174,261 @@
             background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 4px;
             margin-bottom: 10px; border-left: 3px solid var(--neon-blue);
         }
+        
+        /* 商店樣式 */
+        #shop-modal {
+            position: fixed;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 600px; max-height: 80vh;
+            background: rgba(0, 10, 10, 0.95);
+            border: 1px solid var(--neon-yellow);
+            padding: 25px; z-index: 2100;
+            display: none; flex-direction: column;
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(255, 255, 0, 0.2);
+            backdrop-filter: blur(15px);
+        }
+        .shop-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 0, 0.3); padding-bottom: 15px;
+        }
+        .shop-title { color: var(--neon-yellow); margin: 0; letter-spacing: 4px; }
+        .shop-coins { color: white; font-weight: bold; }
+        .shop-coins span { color: var(--neon-yellow); font-size: 1.2em; }
+        
+        .exchange-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .exchange-info { font-size: 13px; color: #aaa; }
+        .exchange-info b { color: var(--neon-blue); }
+        .convert-btn {
+            background: var(--neon-blue); border: none; padding: 8px 15px; color: black;
+            font-weight: bold; cursor: pointer; border-radius: 2px; transition: 0.3s;
+        }
+        .convert-btn:hover { background: white; box-shadow: 0 0 15px var(--neon-blue); }
+        
+        .shop-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+            margin-top: 20px; overflow-y: auto; padding-right: 10px;
+        }
+        .shop-item {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 0, 0.1);
+            padding: 15px; border-radius: 4px; transition: 0.3s;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .shop-item:hover { background: rgba(255, 255, 0, 0.05); border-color: var(--neon-yellow); }
+        .shop-item h3 { margin: 0 0 10px 0; font-size: 1.1em; color: white; }
+        .shop-item .price { color: var(--neon-yellow); font-weight: 900; margin-bottom: 15px; }
+        .buy-btn {
+            background: var(--neon-yellow); border: none; padding: 8px; color: black;
+            font-weight: bold; cursor: pointer; border-radius: 2px; transition: 0.3s;
+        }
+        .buy-btn:hover:not(:disabled) { background: white; box-shadow: 0 0 15px var(--neon-yellow); }
+        .buy-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+        /* 成就樣式 */
+        #achievements-modal {
+            position: fixed;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 500px; max-height: 70vh;
+            background: rgba(0, 10, 10, 0.95);
+            border: 1px solid #ffff00;
+            padding: 25px; z-index: 2200;
+            display: none; flex-direction: column;
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(255, 255, 0, 0.2);
+            backdrop-filter: blur(15px);
+        }
+        .achievement-item {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px; margin-bottom: 12px; border-radius: 6px;
+            display: flex; align-items: center; gap: 15px;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .achievement-item.unlocked {
+            background: rgba(255, 215, 0, 0.15) !important;
+            border: 2px solid #ffff00 !important;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.4), inset 0 0 15px rgba(255, 215, 0, 0.1) !important;
+            opacity: 1 !important;
+        }
+        .achievement-item.unlocked::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 5px; height: 100%;
+            background: linear-gradient(to bottom, #ffff00, #ff8800);
+            box-shadow: 0 0 10px #ffff00;
+        }
+        .achievement-icon {
+            font-size: 28px; min-width: 50px; text-align: center;
+            filter: grayscale(1) brightness(0.3);
+            transition: 0.5s;
+        }
+        .unlocked .achievement-icon {
+            filter: grayscale(0) brightness(1.2) drop-shadow(0 0 15px #ffff00) !important;
+            transform: scale(1.2) rotate(5deg);
+        }
+        .achievement-info h4 { 
+            margin: 0; 
+            color: #666; 
+            font-size: 1.1em; 
+            letter-spacing: 1px; 
+            transition: 0.5s;
+        }
+        .unlocked .achievement-info h4 { 
+            background: linear-gradient(90deg, #ffff00, #ffffff, #ffaa00);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textShine 3s linear infinite;
+            font-weight: 900;
+            font-size: 1.2em;
+            text-shadow: 0 0 10px rgba(255,215,0,0.3);
+        }
+        .achievement-info p { 
+            margin: 5px 0 0 0; 
+            font-size: 12px; 
+            color: #555; 
+            transition: 0.5s;
+        }
+        .unlocked .achievement-info p { 
+            color: #fff !important;
+            opacity: 1;
+            text-shadow: 0 0 5px rgba(255,255,255,0.2);
+        }
+        @keyframes textShine {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+        .achievement-progress-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .achievement-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-blue), #ffff00);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        .unlocked .achievement-progress-fill {
+            background: #ffff00 !important;
+            box-shadow: 0 0 5px #ffff00;
+        }
+        .achievement-progress-text {
+            font-size: 9px;
+            color: #aaa;
+            margin-top: 4px;
+            text-align: right;
+            letter-spacing: 1px;
+        }
+        .achievement-date { font-size: 11px; font-weight: bold; color: #888; margin-left: auto; letter-spacing: 1px; }
+
+        /* 載入畫面樣式 - 科技美化版 */
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #001a1a 0%, #000 100%);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000;
+            overflow: hidden;
+        }
+        #loading-overlay::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 100001;
+        }
+        .loading-box {
+            width: 450px;
+            text-align: center;
+            position: relative;
+            padding: 40px;
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            background: rgba(0, 20, 20, 0.5);
+            backdrop-filter: blur(5px);
+        }
+        .loading-text {
+            color: var(--neon-blue);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.5em;
+            font-weight: 900;
+            letter-spacing: 6px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px var(--neon-blue);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.98); }
+        }
+        .loading-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 0;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        #loading-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #004444, var(--neon-blue));
+            box-shadow: 0 0 20px var(--neon-blue);
+            transition: width 0.1s linear;
+            position: relative;
+        }
+        #loading-bar-fill::after {
+            content: "";
+            position: absolute;
+            top: 0; right: 0; width: 10px; height: 100%;
+            background: #fff;
+            box-shadow: 0 0 10px #fff;
+        }
+        #loading-percentage {
+            margin-top: 15px;
+            color: var(--neon-blue);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.1em;
+            font-weight: bold;
+            opacity: 0.9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .loading-decoration {
+            position: absolute;
+            font-size: 10px;
+            color: rgba(0, 255, 255, 0.3);
+            font-family: monospace;
+            text-transform: uppercase;
+        }
+        .top-left { top: 10px; left: 10px; }
+        .bottom-right { bottom: 10px; right: 10px; }
+
         #crosshair {
             position: fixed;
             top: 50%; left: 50%;
@@ -184,11 +439,26 @@
     </style>
 </head>
 <body>
+    <div id="loading-overlay">
+        <div class="loading-box">
+            <div class="loading-decoration top-left">Combat Logic: Initializing</div>
+            <div class="loading-text" id="loading-status">DEPLOYING</div>
+            <div class="loading-bar-bg">
+                <div id="loading-bar-fill"></div>
+            </div>
+            <div id="loading-percentage">
+                <span>WARZONE SYNC</span>
+                <span id="percent-num">0%</span>
+            </div>
+            <div class="loading-decoration bottom-right">Arena Engine v3.0</div>
+        </div>
+    </div>
     <nav class="navbar" id="game-navbar">
         <a href="index.html">HOME</a>
         <a href="game.html" class="active">BATTLE</a>
         <a href="skills.html">SKILLS</a>
-        <a href="#" onclick="toggleWeaponsModal(true)">ARSENAL</a>
+        <a href="#" onclick="toggleShopModal(true)">SHOP</a>
+        <a href="#" onclick="toggleAchievementsModal(true)">TROPHY</a>
         <a href="tutorial.html">TUTORIAL</a>
         <a href="leaderboard.html">RANK</a>
         <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="margin-left: 20px; color: var(--neon-yellow); opacity: 0.8;">English</a>
@@ -206,18 +476,18 @@
                 <div style="color: var(--neon-blue); font-size: 11px; margin-bottom: 12px; font-weight: bold; letter-spacing: 2px;">LOADOUT CONFIG</div>
                 <div style="display: flex; gap: 10px; justify-content: center;">
                     <div class="loadout-slot" id="slot-0" onclick="removeFromLoadout(0)">
-                        <span style="opacity: 0.4; font-size: 9px;" data-i18n="game-primary">PRIMARY</span>
-                        <span class="weapon-name">EMPTY</span>
+                        <span style="opacity: 0.8; font-size: 9px;" data-i18n="game-primary">PRIMARY</span>
+                        <span class="weapon-name" style="color: white; font-weight: bold;">EMPTY</span>
                         <button class="remove-btn">×</button>
                     </div>
                     <div class="loadout-slot" id="slot-1" onclick="removeFromLoadout(1)">
-                        <span style="opacity: 0.4; font-size: 9px;" data-i18n="game-secondary">SECONDARY</span>
-                        <span class="weapon-name">EMPTY</span>
+                        <span style="opacity: 0.8; font-size: 9px;" data-i18n="game-secondary">SECONDARY</span>
+                        <span class="weapon-name" style="color: white; font-weight: bold;">EMPTY</span>
                         <button class="remove-btn">×</button>
                     </div>
                     <div class="loadout-slot" id="slot-skill" onclick="removeSkillFromLoadout()" style="border-color: var(--neon-yellow);">
-                        <span style="opacity: 0.4; font-size: 9px; color: var(--neon-yellow);" data-i18n="game-skill">SKILL</span>
-                        <span class="skill-name">EMPTY</span>
+                        <span style="opacity: 0.8; font-size: 9px; color: var(--neon-yellow);" data-i18n="game-skill">SKILL</span>
+                        <span class="skill-name" style="color: white; font-weight: bold;">EMPTY</span>
                         <button class="remove-btn">×</button>
                     </div>
                 </div>
@@ -227,8 +497,9 @@
 
             <div class="loadout-container" style="min-width: 150px; display: flex; flex-direction: column; justify-content: center; align-self: stretch;">
                 <div style="color: var(--neon-yellow); font-size: 11px; margin-bottom: 5px; font-weight: bold;" data-i18n="main-credits">CREDITS</div>
-                <div style="font-size: 28px; color: var(--neon-yellow); font-weight: 900;">🔑 <span id="welcome-key-count">300</span></div>
-                <button class="secondary-btn" onclick="toggleWeaponsModal(true)" style="margin-top: 10px; font-size: 10px; padding: 5px; border-color: var(--neon-yellow); color: var(--neon-yellow);" data-i18n="game-arsenal-btn">OPEN ARSENAL</button>
+                <div style="font-size: 24px; color: var(--neon-yellow); font-weight: 900;">🪙 <span id="welcome-coin-count">300</span></div>
+                <div style="font-size: 14px; color: #888; margin-bottom: 5px;">🔑 <span id="welcome-key-count">300</span></div>
+                <button class="secondary-btn" onclick="toggleShopModal(true)" style="margin-top: 5px; font-size: 10px; padding: 5px; border-color: var(--neon-yellow); color: var(--neon-yellow);">OPEN SHOP</button>
             </div>
         </div>
 
@@ -397,6 +668,76 @@
     </div>
 
     <script>
+        // --- 全域錯誤捕捉器 ---
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorMsg = `系統錯誤: ${message}\n位置: ${source}:${lineno}`;
+            console.error(errorMsg);
+            // 建立一個明顯的錯誤提示
+            let debugDiv = document.getElementById('debug-log');
+            if (!debugDiv) {
+                debugDiv = document.createElement('div');
+                debugDiv.id = 'debug-log';
+                debugDiv.style.cssText = 'position:fixed; bottom:0; left:0; width:100%; background:rgba(255,0,0,0.8); color:white; font-size:12px; z-index:9999; padding:5px; pointer-events:none;';
+                document.body.appendChild(debugDiv);
+            }
+            debugDiv.innerText = errorMsg;
+            return false;
+        };
+
+        // --- 核心功能先行定義 ---
+        window.performKeyExchange = () => {
+            console.log("Exchange button triggered");
+            const gs = window.gameState;
+            if (!gs || typeof gs.keys === 'undefined') {
+                alert("系統正在同步您的帳號資料，請稍等 3 秒後再試。\n(如果持續出現此訊息，請按下 Ctrl+F5 強制重新整理)");
+                return;
+            }
+            
+            const keys = Number(gs.keys);
+            const coins = Number(gs.coins);
+
+            if (isNaN(keys) || keys <= 0) {
+                alert(`身上沒有鑰匙！(目前鑰匙: ${keys})`);
+                return;
+            }
+            
+            if (confirm(`確定將 ${keys} 鑰匙轉換為 ${keys} 金幣嗎？`)) {
+                try {
+                    gs.coins = coins + keys;
+                    gs.keys = 0;
+                    
+                    const nickname = localStorage.getItem('playerNickname') || 'guest';
+                    const prefix = nickname + '_';
+                    localStorage.setItem(prefix + 'game_keys', "0");
+                    localStorage.setItem(prefix + 'game_coins', gs.coins.toString());
+                    
+                    if (window.saveGameProgress) window.saveGameProgress();
+                    if (window.updateUI) window.updateUI();
+                    window.updateShopUI();
+                    
+                    alert("轉換成功！");
+                } catch (e) {
+                    console.error("Exchange Error:", e);
+                    alert("轉換發生錯誤: " + e.message);
+                }
+            }
+        };
+
+        window.toggleShopModal = (show) => {
+            const modal = document.getElementById('shop-modal');
+            if (modal) {
+                modal.style.display = show ? 'flex' : 'none';
+                if (show) {
+                    window.updateShopUI();
+                    if (window.gameState) {
+                        const keyDisp = document.getElementById('shop-key-display');
+                        if (keyDisp) keyDisp.innerText = window.gameState.keys;
+                    }
+                    if (window.controls && window.controls.unlock) window.controls.unlock();
+                }
+            }
+        };
+
         const sensSlider = document.getElementById('sensitivity-slider');
         const sensNumber = document.getElementById('sensitivity-number');
         const zoomSensSlider = document.getElementById('zoom-sensitivity-slider');
@@ -408,21 +749,20 @@
             const numVal = parseFloat(val);
             if (isZoom) {
                 window.zoomSensitivity = numVal;
-                zoomSensSlider.value = numVal;
-                zoomSensNumber.value = numVal.toFixed(2);
+                if (zoomSensSlider) zoomSensSlider.value = numVal;
+                if (zoomSensNumber) zoomSensNumber.innerText = numVal.toFixed(2);
                 localStorage.setItem('game_zoom_sensitivity', numVal);
             } else {
                 window.gameSensitivity = numVal;
-                sensSlider.value = numVal;
-                sensNumber.value = numVal.toFixed(1);
+                if (sensSlider) sensSlider.value = numVal;
+                if (sensNumber) sensNumber.innerText = numVal.toFixed(1);
                 localStorage.setItem('game_sensitivity', numVal);
             }
         }
 
         sensSlider.addEventListener('input', (e) => updateSens(e.target.value));
-        sensNumber.addEventListener('change', (e) => updateSens(e.target.value));
+        // sensNumber 是 span，不支援 change 事件，移除或改為其他邏輯
         zoomSensSlider.addEventListener('input', (e) => updateSens(e.target.value, true));
-        zoomSensNumber.addEventListener('change', (e) => updateSens(e.target.value, true));
 
         volumeSlider.addEventListener('input', (e) => {
             const val = parseFloat(e.target.value);
@@ -431,8 +771,94 @@
             localStorage.setItem('game_volume', val);
         });
 
+        // 檢查 URL 參數以開啟商店
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('openShop') === 'true') {
+                setTimeout(() => {
+                    if (window.toggleShopModal) window.toggleShopModal(true);
+                }, 500);
+            }
+        });
+
         // --- Loadout 系統 ---
-        let currentLoadout = { primary: 'rifle', secondary: 'pistol', skill: null };
+        let currentLoadout = { primary: 'rifle', secondary: 'pistol', skills: [] };
+
+        window.buyItem = (itemId, price) => {
+            if (!window.gameState) return;
+            if (window.gameState.coins < price) {
+                alert("金幣不足！");
+                return;
+            }
+            
+            if (window.gameState.owned_items.includes(itemId) || window.gameState.unlockedWeapons.includes(itemId)) {
+                alert("已擁有此道具！");
+                return;
+            }
+
+            window.gameState.coins -= price;
+            window.gameState.owned_items.push(itemId);
+            
+            // 如果是武器，也加入解鎖武器清單
+            if (window.gameState.unlockedWeapons && !window.gameState.unlockedWeapons.includes(itemId)) {
+                // 這裡簡化處理，實際武器解鎖邏輯可能更複雜
+                window.gameState.unlockedWeapons.push(itemId);
+            }
+
+            if (window.saveGameProgress) window.saveGameProgress();
+            if (window.updateUI) window.updateUI();
+            window.updateShopUI();
+            
+            alert(`購買成功: ${itemId}`);
+        };
+
+        window.updateShopUI = () => {
+            const grid = document.getElementById('shop-grid');
+            const gs = window.gameState;
+            if (!grid || !gs) return;
+
+            // 更新商店頂部的餘額顯示
+            const coinDisp = document.getElementById('shop-coin-display');
+            const keyDisp = document.getElementById('shop-key-display');
+            if (coinDisp) coinDisp.innerText = gs.coins;
+            if (keyDisp) keyDisp.innerText = gs.keys;
+
+            const shopItems = [
+                { id: 'knife', name: '軍用匕首', price: 50, desc: '近戰利器，背刺可秒殺。' },
+                { id: 'pistol', name: '制式手槍', price: 30, desc: '穩定的副武器。' },
+                { id: 'sniper', name: '狙擊步槍', price: 200, desc: '超遠距離，高額傷害。' },
+                { id: 'shotgun', name: '散彈槍', price: 100, desc: '近距離噴射，大範圍打擊。' },
+                { id: 'paintball', name: '漆彈槍', price: 150, desc: '極快射速，繽紛色彩。' },
+                { id: 'machinegun', name: '重機槍', price: 250, desc: '壓制力驚人。' },
+                { id: 'rpg', name: '火箭筒', price: 400, desc: '一發入魂，大範圍爆炸。' },
+                { id: 'flamethrower', name: '噴火器', price: 350, desc: '持續燃燒傷害。' },
+                { id: 'energy', name: '能量手槍', price: 150, desc: '無限子彈，科技巔峰。' },
+                { id: 'glass', name: '玻璃槍', price: 10000, desc: '神之武器，摧毀一切。' },
+                { id: 'vip', name: '💎 VIP 特權', price: 5000, desc: '可同時裝備兩個技能，且擊殺金鑰獎勵乘以 1.5 倍！' }
+            ];
+
+            grid.innerHTML = '';
+            shopItems.forEach(item => {
+                const isOwned = window.gameState.owned_items.includes(item.id) || 
+                                window.gameState.unlockedWeapons.includes(item.id);
+                
+                const card = document.createElement('div');
+                card.className = 'shop-item';
+                card.innerHTML = `
+                    <div>
+                        <h3>${item.name}</h3>
+                        <p style="font-size: 11px; opacity: 0.7; margin-bottom: 10px;">${item.desc}</p>
+                    </div>
+                    <div>
+                        <div class="price">${isOwned ? 'OWNED' : '🪙 ' + item.price}</div>
+                        <button class="buy-btn" ${isOwned ? 'disabled' : ''} onclick="buyItem('${item.id}', ${item.price})">
+                            ${isOwned ? 'ALREADY OWNED' : 'PURCHASE'}
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        };
 
         const weaponCats = {
             rifle: 'primary', sniper: 'primary', shotgun: 'primary', paintball: 'primary',
@@ -440,13 +866,112 @@
             pistol: 'secondary', knife: 'secondary'
         };
 
+        // --- 成就 UI 系統 ---
+        window.toggleAchievementsModal = (show) => {
+            const modal = document.getElementById('achievements-modal');
+            if (modal) {
+                modal.style.display = show ? 'flex' : 'none';
+                if (show) {
+                    window.updateAchievementsUI();
+                    if (window.controls && window.controls.unlock) window.controls.unlock();
+                }
+            }
+        };
+
+        window.updateAchievementsUI = () => {
+            const list = document.getElementById('achievements-list');
+            const gs = window.gameState;
+            if (!list || !gs) return;
+            
+            const achievementData = {
+                'gold_rifle': { id: 'rifle', title: '黃金自動步槍', desc: '擊殺 100 名敵人', icon: '🔫', target: 100 },
+                'gold_sniper': { id: 'sniper', title: '黃金狙擊步槍', desc: '擊殺 100 名敵人', icon: '🎯', target: 100 },
+                'gold_shotgun': { id: 'shotgun', title: '黃金散彈槍', desc: '擊殺 100 名敵人', icon: '💥', target: 100 },
+                'gold_knife': { id: 'knife', title: '黃金軍用匕首', desc: '擊殺 50 名敵人', icon: '🔪', target: 50 },
+                'gold_pistol': { id: 'pistol', title: '黃金制式手槍', desc: '擊殺 50 名敵人', icon: '🔫', target: 50 },
+                'gold_paintball': { id: 'paintball', title: '黃金漆彈槍', desc: '擊殺 100 名敵人', icon: '🎨', target: 100 },
+                'gold_machinegun': { id: 'machinegun', title: '黃金重機槍', desc: '擊殺 100 名敵人', icon: '🔥', target: 100 },
+                'gold_rpg': { id: 'rpg', title: '黃金火箭筒', desc: '擊殺 100 名敵人', icon: '🚀', target: 100 },
+                'gold_flamethrower': { id: 'flamethrower', title: '黃金噴火器', desc: '擊殺 100 名敵人', icon: '🔥', target: 100 },
+                'gold_energy': { id: 'energy', title: '黃金能量手槍', desc: '擊殺 50 名敵人', icon: '⚡', target: 50 },
+                'gold_glass': { id: 'glass', title: '黃金玻璃槍', desc: '擊殺 100 名敵人', icon: '💎', target: 100 },
+                'slayer_500': { id: 'total', title: '傳奇獵人', desc: '累計擊殺 500 名敵人', icon: '🏆', target: 500 }
+            };
+
+            list.innerHTML = '';
+            
+            // 顯示所有可能的成就
+            Object.keys(achievementData).forEach(achId => {
+                const data = achievementData[achId];
+                
+                // 計算進度
+                let current = 0;
+                if (data.id === 'total') {
+                    current = gs.kills || 0;
+                } else {
+                    current = (gs.weaponKills && gs.weaponKills[data.id]) ? gs.weaponKills[data.id] : 0;
+                }
+                
+                // 只要進度達到或超過目標，或者是系統已標記解鎖，都視為已完成
+                const isCompleted = gs.achievements.includes(achId) || current >= data.target;
+                
+                // 超過要求則不再計算 (封頂)
+                const displayCount = Math.min(current, data.target);
+                const percent = Math.min(100, (current / data.target) * 100);
+
+                const item = document.createElement('div');
+                item.className = 'achievement-item' + (isCompleted ? ' unlocked' : '');
+                item.style.flexDirection = 'column';
+                item.style.alignItems = 'stretch';
+                
+                item.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="achievement-icon">${data.icon}</div>
+                        <div class="achievement-info">
+                            <h4>${data.title}</h4>
+                            <p>${data.desc}</p>
+                        </div>
+                        ${isCompleted ? 
+                            '<div class="achievement-date" style="color: #ffff00; font-weight: 900; font-size: 20px; text-shadow: 0 0 15px gold; letter-spacing: 2px; white-space: nowrap;">【 已完成 】</div>' : 
+                            `<div class="achievement-date" style="font-family: monospace; font-size: 14px; white-space: nowrap;">${displayCount} / ${data.target}</div>`
+                        }
+                    </div>
+                    <div class="achievement-progress-container">
+                        <div class="achievement-progress-fill" style="width: ${percent}%;"></div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        };
+
         function selectSkill(id) {
-            currentLoadout.skill = id;
+            const isVIP = window.gameState && window.gameState.owned_items.includes('vip');
+            const maxSkills = isVIP ? 2 : 1;
+            
+            if (currentLoadout.skills.includes(id)) {
+                // 如果已經選了，就移除
+                currentLoadout.skills = currentLoadout.skills.filter(s => s !== id);
+            } else {
+                if (currentLoadout.skills.length < maxSkills) {
+                    currentLoadout.skills.push(id);
+                } else {
+                    if (maxSkills === 1) {
+                        currentLoadout.skills = [id]; // 單技能模式直接替換
+                    } else {
+                        alert("最多隻能裝備兩個技能！");
+                    }
+                }
+            }
             if (typeof updateLoadoutUI === 'function') updateLoadoutUI();
         }
 
-        function removeSkillFromLoadout() {
-            currentLoadout.skill = null;
+        function removeSkillFromLoadout(index = 0) {
+            if (Array.isArray(currentLoadout.skills)) {
+                if (index === -1) currentLoadout.skills = []; // 移除全部
+                else currentLoadout.skills.splice(index, 1);
+            } else {
+                currentLoadout.skills = [];
+            }
             if (typeof updateLoadoutUI === 'function') updateLoadoutUI();
         }
 
@@ -500,7 +1025,7 @@
             if (skillContainer) {
                 skillContainer.innerHTML = '';
                 unlockedSkills.forEach(id => {
-                    const isSelected = currentLoadout.skill === id;
+                    const isSelected = currentLoadout.skills && currentLoadout.skills.includes(id);
                     const tag = document.createElement('div');
                     tag.className = 'weapon-tag' + (isSelected ? ' selected' : '');
                     tag.style.borderColor = 'var(--neon-yellow)';
@@ -521,6 +1046,8 @@
             const sSlot = document.getElementById('slot-1');
             const skillSlot = document.getElementById('slot-skill');
             const unselectedText = (typeof getTranslation === 'function') ? getTranslation(lang, 'game-unselected') : 'EMPTY';
+            
+            const isVIP = window.gameState && window.gameState.owned_items.includes('vip');
 
             if (pSlot) {
                 const nameEl = pSlot.querySelector('.weapon-name');
@@ -535,10 +1062,32 @@
             }
 
             if (skillSlot) {
+                // 第一個技能槽位
+                const s1 = currentLoadout.skills[0];
                 const nameEl = skillSlot.querySelector('.skill-name');
-                if (nameEl) nameEl.innerText = currentLoadout.skill ? ((typeof getTranslation === 'function' ? getTranslation(lang, `s-${currentLoadout.skill}`) : null) || currentLoadout.skill) : unselectedText;
-                skillSlot.classList.toggle('active', !!currentLoadout.skill);
-                skillSlot.style.borderColor = currentLoadout.skill ? 'var(--neon-yellow)' : '#333';
+                if (nameEl) nameEl.innerText = s1 ? ((typeof getTranslation === 'function' ? getTranslation(lang, `s-${s1}`) : null) || s1) : unselectedText;
+                skillSlot.classList.toggle('active', !!s1);
+                skillSlot.style.borderColor = s1 ? 'var(--neon-yellow)' : '#333';
+                skillSlot.onclick = () => removeSkillFromLoadout(0);
+
+                // 處理第二個技能槽位 (VIP)
+                let skillSlot2 = document.getElementById('slot-skill-2');
+                if (isVIP) {
+                    if (!skillSlot2) {
+                        skillSlot2 = skillSlot.cloneNode(true);
+                        skillSlot2.id = 'slot-skill-2';
+                        skillSlot.parentNode.appendChild(skillSlot2);
+                    }
+                    skillSlot2.style.display = 'flex';
+                    const s2 = currentLoadout.skills[1];
+                    const nameEl2 = skillSlot2.querySelector('.skill-name');
+                    if (nameEl2) nameEl2.innerText = s2 ? ((typeof getTranslation === 'function' ? getTranslation(lang, `s-${s2}`) : null) || s2) : unselectedText;
+                    skillSlot2.classList.toggle('active', !!s2);
+                    skillSlot2.style.borderColor = s2 ? 'var(--neon-yellow)' : '#333';
+                    skillSlot2.onclick = () => removeSkillFromLoadout(1);
+                } else if (skillSlot2) {
+                    skillSlot2.style.display = 'none';
+                }
             }
             
             // 同步裝備至遊戲
@@ -550,7 +1099,7 @@
             }
 
             if (window.setEquippedSkill) {
-                window.setEquippedSkill(currentLoadout.skill);
+                window.setEquippedSkill(currentLoadout.skills);
             }
 
             // 更新開始按鈕狀態
@@ -639,13 +1188,52 @@
                 alert('請先選擇主武器與副武器！');
                 return;
             }
-            document.getElementById('welcome-screen').style.display = 'none';
+            
+            const overlay = document.getElementById('loading-overlay');
+            const barFill = document.getElementById('loading-bar-fill');
+            const percentNum = document.getElementById('percent-num');
+            const statusText = document.getElementById('loading-status');
+            
+            overlay.style.display = 'flex';
+            let progress = 0;
+            
+            const messages = [
+                "ALLOCATING RESOURCES",
+                "PREPARING COMBAT ZONE",
+                "CALIBRATING SENSORS",
+                "SYNCING NEURAL LINK",
+                "COMBAT READY"
+            ];
+
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 8) + 4; // 4-12%
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        document.getElementById('welcome-screen').style.display = 'none';
+                        // 嘗試請求鎖定指針
+                        if (window.controls && window.controls.lock) window.controls.lock();
+                    }, 500);
+                }
+                
+                barFill.style.width = progress + '%';
+                if (percentNum) percentNum.innerText = progress + '%';
+                
+                const msgIndex = Math.min(messages.length - 1, Math.floor(progress / 20));
+                statusText.innerText = messages[msgIndex];
+                
+            }, 60);
         }
 
         function toggleWeaponsModal(show) {
             const modal = document.getElementById('weapons-modal');
             modal.style.display = show ? 'flex' : 'none';
             if (show) {
+                // 解鎖滑鼠以利操作 UI
+                if (window.controls && window.controls.unlock) window.controls.unlock();
+                
                 // 更新已擁有狀態
                 const unlocked = window.getUnlockedWeapons ? window.getUnlockedWeapons() : ['rifle'];
                 ['knife', 'sniper', 'shotgun', 'pistol', 'paintball', 'machinegun', 'rpg', 'flamethrower', 'energy', 'glass'].forEach(id => {
@@ -687,6 +1275,17 @@
         <div id="score-list"></div>
     </div>
     <div id="hud">
+        <!-- 等級與經驗條 -->
+        <div style="position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%); width: 300px; text-align: center;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-family: 'Courier New', Courier, monospace; font-size: 10px; letter-spacing: 1px;">
+                <span id="level-display" style="color: var(--neon-blue); font-weight: 900;">LV.1</span>
+                <span id="xp-display" style="color: #fff; opacity: 0.6;">0 / 200 XP</span>
+            </div>
+            <div style="width: 100%; height: 4px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.2); border-radius: 2px; overflow: hidden;">
+                <div id="xp-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #00ffff, #0088ff); box-shadow: 0 0 10px #00ffff; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+
         <div class="hud-panel">
             <div id="current-weapon" style="font-size: 12px; color: var(--neon-blue); letter-spacing: 2px; margin-bottom: 5px; text-transform: uppercase;">RIFLE</div>
             <div class="hp-container">
@@ -702,6 +1301,38 @@
     <div class="ammo-panel">
         <div style="font-size: 9px; opacity: 0.5; letter-spacing: 2px;">AMMO</div>
         <span id="ammo-text">--</span><span id="max-ammo-text" style="font-size: 16px; opacity: 0.6;"> / --</span>
+    </div>
+
+    <!-- 商店彈窗 -->
+    <div id="shop-modal">
+        <div class="shop-header">
+            <h2 class="shop-title">CYBER SHOP</h2>
+            <div class="shop-coins">BALANCE: <span id="shop-coin-display">0</span> COINS</div>
+            <button onclick="toggleShopModal(false)" style="background: none; border: none; color: #555; cursor: pointer; font-size: 20px;">✕</button>
+        </div>
+        
+        <div class="exchange-section">
+            <div class="exchange-info">
+                EXCHANGE: <b>10 KEYS</b> ➔ <b>10 COINS</b><br>
+                <small>CURRENT KEYS: <span id="shop-key-display" style="color: #ffff00;">0</span></small>
+            </div>
+            <button class="convert-btn" onclick="performKeyExchange()">CONVERT ALL KEYS</button>
+        </div>
+
+        <div id="shop-grid" class="shop-grid">
+            <!-- 商店道具由 JS 動態生成 -->
+        </div>
+    </div>
+
+    <!-- 成就彈窗 -->
+    <div id="achievements-modal">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ffff00; padding-bottom: 15px; margin-bottom: 20px;">
+            <h2 style="color: #ffff00; margin: 0; letter-spacing: 4px;">TROPHY ROOM</h2>
+            <button onclick="toggleAchievementsModal(false)" style="background: none; border: none; color: #555; cursor: pointer; font-size: 20px;">✕</button>
+        </div>
+        <div id="achievements-list" style="overflow-y: auto;">
+            <!-- 成就列表 -->
+        </div>
     </div>
 
     <div id="crosshair">
@@ -752,7 +1383,7 @@
         // 顯示玩家暱稱
         document.getElementById('player-name-display').textContent = localStorage.getItem('playerNickname') || '未知';
     </script>
-    <script type="module" src="game.js"></script>
+    <script type="module" src="game.js?v=8"></script>
 </body>
 </html>
 

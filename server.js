@@ -74,6 +74,7 @@ io.on('connection', (socket) => {
                     // 如果雲端有資料，檢查是否需要從本地遷移 (以金鑰或武器數量判斷)
                     const shouldMigrate = !playerData || 
                         (playerData.keys > (cloudData.keys || 0)) || 
+                        (playerData.coins > (cloudData.coins || 0)) ||
                         (playerData.unlockedweapons?.length > (cloudData.unlockedWeapons?.length || cloudData.unlockedweapons?.length || 0));
 
                     if (shouldMigrate && playerData) {
@@ -83,8 +84,11 @@ io.on('connection', (socket) => {
                             .upsert([{
                                 nickname: nickname,
                                 keys: playerData.keys,
+                                coins: playerData.coins || playerData.keys,
                                 unlockedweapons: playerData.unlockedweapons,
-                                unlockedskills: playerData.unlockedskills
+                                unlockedskills: playerData.unlockedskills,
+                                owned_items: playerData.owned_items || [],
+                                weapon_kills: playerData.weapon_kills || {}
                             }])
                             .select()
                             .single();
@@ -104,8 +108,11 @@ io.on('connection', (socket) => {
                         .insert([{
                             nickname: nickname,
                             keys: playerData.keys,
+                            coins: playerData.coins || playerData.keys,
                             unlockedweapons: playerData.unlockedweapons,
-                            unlockedskills: playerData.unlockedskills
+                            unlockedskills: playerData.unlockedskills,
+                            owned_items: playerData.owned_items || [],
+                            weapon_kills: playerData.weapon_kills || {}
                         }])
                         .select()
                         .single();
@@ -121,8 +128,10 @@ io.on('connection', (socket) => {
             playerData = {
                 nickname: nickname,
                 keys: 300,
+                coins: 300,
                 unlockedweapons: ['rifle', 'pistol'],
-                unlockedskills: []
+                unlockedskills: [],
+                owned_items: []
             };
             
             // 如果有 Supabase，在雲端建立新玩家
@@ -146,7 +155,10 @@ io.on('connection', (socket) => {
             data: {
                 ...playerData,
                 unlockedSkills: playerData.unlockedskills || [],
-                unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol']
+                unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol'],
+                coins: playerData.coins || playerData.keys || 300,
+                owned_items: playerData.owned_items || [],
+                weaponKills: playerData.weapon_kills || {}
             }
         });
 
@@ -163,8 +175,12 @@ io.on('connection', (socket) => {
         // 1. 更新本地資料 (即使沒有 Supabase 也能持久化)
         const updateData = {
             keys: data.keys,
+            coins: data.coins || data.keys,
+            kills: data.kills || 0,
             unlockedWeapons: data.unlockedWeapons || ['rifle', 'pistol'],
-            unlockedSkills: data.unlockedSkills || []
+            unlockedSkills: data.unlockedSkills || [],
+            owned_items: data.owned_items || [],
+            weaponKills: data.weaponKills || {}
         };
         
         oldPlayerData[data.nickname] = updateData;
@@ -182,8 +198,12 @@ io.on('connection', (socket) => {
                     .from('players')
                     .update({
                         keys: data.keys,
+                        coins: data.coins || data.keys,
+                        total_kills: data.kills || 0,
                         unlockedweapons: data.unlockedWeapons,
-                        unlockedskills: data.unlockedSkills || []
+                        unlockedskills: data.unlockedSkills || [],
+                        owned_items: data.owned_items || [],
+                        weapon_kills: data.weaponKills || {}
                     })
                     .eq('nickname', data.nickname);
 
@@ -192,6 +212,48 @@ io.on('connection', (socket) => {
                 }
             } catch (e) {
                 console.error('儲存時發生錯誤:', e);
+            }
+        }
+    });
+
+    // 處理成就解鎖
+    socket.on('unlockAchievement', async (data) => {
+        if (!data.nickname || !data.achievementId) return;
+        
+        if (supabase) {
+            try {
+                const { error } = await supabase
+                    .from('achievements')
+                    .insert([{
+                        nickname: data.nickname,
+                        achievement_id: data.achievementId
+                    }]);
+                
+                if (error && error.code !== '23505') { // 忽略重複插入錯誤
+                    console.error('解鎖成就失敗:', error);
+                }
+            } catch (err) {
+                console.error('Supabase 成就處理錯誤:', err);
+            }
+        }
+    });
+
+    // 獲取成就列表
+    socket.on('getAchievements', async (nickname) => {
+        if (!nickname) return;
+        
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('achievements')
+                    .select('achievement_id, unlocked_at')
+                    .eq('nickname', nickname);
+                
+                if (!error) {
+                    socket.emit('achievementsList', data);
+                }
+            } catch (err) {
+                console.error('獲取成就失敗:', err);
             }
         }
     });

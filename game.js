@@ -48,11 +48,111 @@ const getPlayerPrefix = () => {
     return (localStorage.getItem('playerNickname') || 'guest') + '_';
 };
 
+// 遊戲狀態初始化 (提升至最上方確保全域可用)
+const gameState = {
+    playerHP: 250,
+    maxHP: 250,
+    currentSlot: 'rifle', 
+    activeSlotIndex: 0,
+    primaryIndex: 0,
+    isZoomed: false,
+    lastShotTime: 0,
+    currentAmmo: {}, 
+    isReloading: false,
+    isFiring: false,
+    wave: 1,
+    kills: 0,
+    xp: 0,
+    level: 50,
+    keys: 300,
+    coins: 300,
+    unlockedWeapons: ['rifle', 'pistol'],
+    unlockedSkills: [],
+    owned_items: [],
+    equippedWeapons: ['rifle'],
+    isSliding: false,
+    slideTime: 0,
+    lastSlideTime: 0,
+    slideCooldown: 1500, 
+    canJump: true,
+    isMega: false,
+    megaTime: 0,
+    weaponKills: {},
+    achievements: [],
+    equippedSkills: [] // 支援多個技能
+};
+window.gameState = gameState;
+
+// 延遲載入實際存檔
+setTimeout(() => {
+    gameState.keys = getSavedKeys();
+    gameState.coins = getSavedCoins();
+    gameState.kills = getSavedKills();
+    gameState.xp = getSavedXP();
+    gameState.level = getSavedLevel();
+    gameState.unlockedWeapons = getSavedWeapons();
+    gameState.unlockedSkills = getSavedSkills();
+    gameState.owned_items = getSavedOwnedItems();
+    gameState.weaponKills = getSavedWeaponKills();
+    
+    // 強制給予 50 等獎勵
+    if (!gameState.unlockedWeapons.includes('energy_rifle')) gameState.unlockedWeapons.push('energy_rifle');
+    if (!gameState.unlockedSkills.includes('timestop')) gameState.unlockedSkills.push('timestop');
+    gameState.level = 50;
+    saveGameProgress();
+    
+    console.log("Game state synchronized from storage");
+}, 100);
+
 const getSavedKeys = () => {
     const saved = localStorage.getItem(getPlayerPrefix() + 'game_keys');
     if (saved === null) return 300; // 新玩家初始給予 300 鑰匙
     const val = parseInt(saved);
     return isNaN(val) ? 300 : val;
+};
+
+const getSavedKills = () => {
+    const saved = localStorage.getItem(getPlayerPrefix() + 'game_kills');
+    return saved ? parseInt(saved) : 0;
+};
+
+const getSavedXP = () => {
+    const saved = localStorage.getItem(getPlayerPrefix() + 'game_xp');
+    return saved ? parseInt(saved) : 0;
+};
+
+const getSavedLevel = () => {
+    const saved = localStorage.getItem(getPlayerPrefix() + 'game_level');
+    return 50; // 強制設定為 50 等
+};
+
+const getSavedCoins = () => {
+    const saved = localStorage.getItem(getPlayerPrefix() + 'game_coins');
+    if (saved === null) {
+        // 如果沒有 coins，嘗試從 keys 繼承，但不要反過來強制同步
+        const keys = localStorage.getItem(getPlayerPrefix() + 'game_keys');
+        return keys !== null ? parseInt(keys) : 300;
+    }
+    const val = parseInt(saved);
+    return isNaN(val) ? 300 : val;
+};
+
+const getSavedOwnedItems = () => {
+    try {
+        const saved = localStorage.getItem(getPlayerPrefix() + 'game_owned_items');
+        return saved ? JSON.parse(saved) : [];
+    } catch(e) {
+        return [];
+    }
+};
+
+const getSavedWeaponKills = () => {
+    try {
+        const saved = localStorage.getItem(getPlayerPrefix() + 'game_weapon_kills');
+        return saved ? JSON.parse(saved) : {};
+    } catch(e) {
+        return {};
+    }
 };
 
 const getSavedWeapons = () => {
@@ -79,45 +179,206 @@ const saveGameProgress = () => {
     
     // 存到瀏覽器本地 (備份)
     localStorage.setItem(prefix + 'game_keys', gameState.keys.toString());
+    localStorage.setItem(prefix + 'game_coins', gameState.coins.toString());
+    localStorage.setItem(prefix + 'game_kills', gameState.kills.toString());
+    localStorage.setItem(prefix + 'game_xp', gameState.xp.toString());
+    localStorage.setItem(prefix + 'game_level', gameState.level.toString());
     localStorage.setItem(prefix + 'game_unlocked_weapons', JSON.stringify(gameState.unlockedWeapons));
     localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(gameState.unlockedSkills));
+    localStorage.setItem(prefix + 'game_owned_items', JSON.stringify(gameState.owned_items));
+    localStorage.setItem(prefix + 'game_weapon_kills', JSON.stringify(gameState.weaponKills));
     
     // 存到伺服器 (核心)
     if (window.socket) {
         window.socket.emit('saveProgress', {
             nickname: nickname,
             keys: gameState.keys,
+            coins: gameState.coins,
+            kills: gameState.kills,
+            xp: gameState.xp,
+            level: gameState.level,
             unlockedWeapons: gameState.unlockedWeapons,
-            unlockedSkills: gameState.unlockedSkills
+            unlockedSkills: gameState.unlockedSkills,
+            owned_items: gameState.owned_items,
+            weaponKills: gameState.weaponKills
         });
     }
 };
+window.saveGameProgress = saveGameProgress;
 
-// 遊戲狀態
-const gameState = {
-    playerHP: 250,
-    maxHP: 250,
-    currentSlot: 'rifle', 
-    activeSlotIndex: 0,
-    primaryIndex: 0,
-    isZoomed: false,
-    lastShotTime: 0,
-    currentAmmo: {}, 
-    isReloading: false,
-    isFiring: false,
-    wave: 1,
-    kills: 0,
-    keys: getSavedKeys(),
-    unlockedWeapons: getSavedWeapons(),
-    unlockedSkills: getSavedSkills(),
-    equippedWeapons: ['rifle'], // 預設只裝備步槍
-    isSliding: false,
-    slideTime: 0,
-    lastSlideTime: 0,
-    slideCooldown: 1500, 
-    canJump: true,
-    isMega: false,
-    megaTime: 0
+// 檢查成就
+const checkAchievements = () => {
+    const nickname = localStorage.getItem('playerNickname') || 'guest';
+    
+    const weaponCategories = {
+        rifle: 'primary', sniper: 'primary', shotgun: 'primary', paintball: 'primary',
+        machinegun: 'primary', rpg: 'primary', flamethrower: 'primary', glass: 'primary',
+        pistol: 'secondary', knife: 'secondary', energy: 'secondary'
+    };
+
+    Object.keys(gameState.weaponKills).forEach(weaponId => {
+        const killCount = gameState.weaponKills[weaponId];
+        const category = weaponCategories[weaponId] || 'primary';
+        const threshold = (category === 'primary') ? 100 : 50;
+        const achievementId = `gold_${weaponId}`;
+        
+        if (killCount >= threshold && !gameState.achievements.includes(achievementId)) {
+            const weaponName = weaponConfig[weaponId] ? weaponConfig[weaponId].name : weaponId;
+            unlockAchievement(achievementId, `黃金雕像: ${weaponName}`, `解鎖 ${weaponName} 專屬擊殺特效 (1:1 金色雕像)`);
+        }
+    });
+
+    // 累積擊殺成就
+    if (gameState.kills >= 500 && !gameState.achievements.includes('slayer_500')) {
+        unlockAchievement('slayer_500', '傳奇獵人', '累計擊殺 500 名敵人');
+    }
+    
+    // 如果 UI 已經開啟，即時更新介面
+    if (window.updateAchievementsUI) window.updateAchievementsUI();
+};
+window.checkAchievements = checkAchievements;
+
+const unlockAchievement = (id, title, desc) => {
+    if (gameState.achievements.includes(id)) return;
+    
+    gameState.achievements.push(id);
+    const nickname = localStorage.getItem('playerNickname') || 'guest';
+    
+    if (socket) {
+        socket.emit('unlockAchievement', { nickname, achievementId: id });
+    }
+    
+    // 顯示通知
+    showAchievementPopup(title, desc);
+    
+    // 存到本地備份
+    localStorage.setItem(getPlayerPrefix() + 'game_achievements', JSON.stringify(gameState.achievements));
+};
+
+const spawnGoldenStatue = (position, quaternion) => {
+    // 建立一個金色材質
+    const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xffd700,
+        metalness: 1.0,
+        roughness: 0.1,
+        emissive: 0xaa8800,
+        emissiveIntensity: 0.2
+    });
+
+    // 建立一個簡單的雕像 (使用原始模型結構，但全部換成金色)
+    const statue = new THREE.Group();
+    
+    // 身體
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.4), goldMat);
+    body.position.y = 0.7;
+    statue.add(body);
+    
+    // 頭
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25), goldMat);
+    head.position.y = 1.3;
+    statue.add(head);
+
+    // 手腳 (簡化版)
+    const limbGeo = new THREE.BoxGeometry(0.15, 0.6, 0.15);
+    const lArm = new THREE.Mesh(limbGeo, goldMat);
+    lArm.position.set(-0.4, 0.7, 0); statue.add(lArm);
+    const rArm = new THREE.Mesh(limbGeo, goldMat);
+    rArm.position.set(0.4, 0.7, 0); statue.add(rArm);
+    
+    statue.position.copy(position);
+    statue.quaternion.copy(quaternion);
+    
+    scene.add(statue);
+    
+    // 3秒後消失
+    setTimeout(() => {
+        let opacity = 1.0;
+        const fade = setInterval(() => {
+            opacity -= 0.1;
+            statue.traverse(node => {
+                if (node.isMesh) {
+                    node.material.transparent = true;
+                    node.material.opacity = opacity;
+                }
+            });
+            if (opacity <= 0) {
+                clearInterval(fade);
+                scene.remove(statue);
+            }
+        }, 100);
+    }, 2000);
+};
+
+const showLevelUpPopup = (level) => {
+    const popup = document.createElement('div');
+    popup.style.cssText = `
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
+        background: rgba(0, 40, 40, 0.95); border: 3px solid #00ffff;
+        color: white; padding: 30px; border-radius: 20px; z-index: 20000;
+        text-align: center; box-shadow: 0 0 50px rgba(0, 255, 255, 0.5);
+        transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        opacity: 0; pointer-events: none;
+    `;
+    popup.innerHTML = `
+        <div style="font-size: 14px; letter-spacing: 4px; color: #00ffff; margin-bottom: 10px;">LEVEL UP</div>
+        <div style="font-size: 48px; font-weight: 900; text-shadow: 0 0 20px #00ffff;">LV.${level}</div>
+        <div style="margin-top: 15px; font-size: 12px; opacity: 0.8;">${level === 50 ? 'LEGENDARY REWARDS UNLOCKED' : 'NEW CAPACITY UNLOCKED'}</div>
+    `;
+    document.body.appendChild(popup);
+
+    setTimeout(() => {
+        popup.style.opacity = '1';
+        popup.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 100);
+    
+    // 50 級特殊獎勵
+    if (level === 50) {
+        if (!gameState.unlockedWeapons.includes('energy_rifle')) {
+            gameState.unlockedWeapons.push('energy_rifle');
+        }
+        if (!gameState.unlockedSkills.includes('timestop')) {
+            gameState.unlockedSkills.push('timestop');
+        }
+        setTimeout(() => alert("恭喜達成 50 級！已解鎖傳奇武器：能量步槍 & 終極技能：時間暫停！"), 500);
+    }
+
+    setTimeout(() => {
+        popup.style.opacity = '0';
+        popup.style.transform = 'translate(-50%, -50%) scale(1.5)';
+        setTimeout(() => popup.remove(), 500);
+    }, 3000);
+
+    // 升級獎勵
+    gameState.keys += 100;
+    saveGameProgress();
+    updateUI();
+};
+
+const showAchievementPopup = (title, desc) => {
+    const popup = document.createElement('div');
+    popup.style.cssText = `
+        position: fixed; top: 20px; right: -320px; width: 280px;
+        background: rgba(0, 30, 30, 0.95); border: 2px solid #ffff00;
+        color: white; padding: 15px; border-radius: 12px; z-index: 10000;
+        transition: right 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 0 30px rgba(255, 221, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        display: flex; flex-direction: column; gap: 4px;
+    `;
+    popup.innerHTML = `
+        <div style="color: #ffff00; font-weight: 900; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;">🏆 Achievement Unlocked</div>
+        <div style="font-size: 18px; font-weight: 900; background: linear-gradient(90deg, #ffff00, #ffffff, #ffaa00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 10px rgba(255,215,0,0.3);">${title}</div>
+        <div style="font-size: 12px; color: #ccc; line-height: 1.4;">${desc}</div>
+    `;
+    document.body.appendChild(popup);
+    
+    setTimeout(() => { popup.style.right = '20px'; }, 100);
+    setTimeout(() => {
+        popup.style.right = '-300px';
+        setTimeout(() => popup.remove(), 500);
+    }, 5000);
+    
+    if (sounds.pickup) sounds.pickup();
 };
 
 // 移除原本的靜態技能初始化，改由 setEquippedSkill 控管
@@ -212,19 +473,20 @@ const weaponConfig = {
         type: 'paintball',
         cost: 150
     },
-    machinegun: {
-        name: '重型機關槍',
-        slot: 6,
-        damage: 18,
-        fireRate: 60,
-        color: 0xffaa00,
-        size: [0.15, 0.25, 0.9],
-        pos: [0.3, -0.4, -0.6],
-        spread: 0.08,
-        ammo: 150,
-        reloadTime: 3000,
+    energy_rifle: {
+        name: '傳奇能量步槍',
+        slot: 11,
+        damage: 20,
+        fireRate: 1000,
+        color: 0x00ffff,
+        size: [0.1, 0.2, 1.2],
+        pos: [0.3, -0.3, -0.7],
+        spread: 0,
+        ammo: Infinity,
+        reloadTime: 0,
         type: 'rifle',
-        cost: 250
+        isLegendary: true,
+        bounces: true
     },
     rpg: {
         name: '火箭推進榴彈 (RPG)',
@@ -365,21 +627,38 @@ if (socket) {
         if (data) {
             console.log("Login sync success:", data);
             gameState.keys = data.keys || 300;
-            // 處理命名不一致 (Supabase 為全小寫)
+            gameState.coins = data.coins || data.keys || 300;
+            gameState.kills = data.total_kills || data.kills || 0;
+            gameState.xp = data.xp || 0;
+            gameState.level = data.level || 1;
             gameState.unlockedWeapons = data.unlockedWeapons || data.unlockedweapons || ['rifle', 'pistol'];
             gameState.unlockedSkills = data.unlockedSkills || data.unlockedskills || [];
+            gameState.owned_items = data.owned_items || [];
+            gameState.weaponKills = data.weaponKills || data.weapon_kills || {};
             
-            // 同步回 localStorage
+            socket.emit('getAchievements', data.nickname);
             const prefix = getPlayerPrefix();
             localStorage.setItem(prefix + 'game_keys', gameState.keys.toString());
+            localStorage.setItem(prefix + 'game_coins', gameState.coins.toString());
+            localStorage.setItem(prefix + 'game_kills', gameState.kills.toString());
+            localStorage.setItem(prefix + 'game_xp', gameState.xp.toString());
+            localStorage.setItem(prefix + 'game_level', gameState.level.toString());
             localStorage.setItem(prefix + 'game_unlocked_weapons', JSON.stringify(gameState.unlockedWeapons));
             localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(gameState.unlockedSkills));
+            localStorage.setItem(prefix + 'game_owned_items', JSON.stringify(gameState.owned_items));
+            localStorage.setItem(prefix + 'game_weapon_kills', JSON.stringify(gameState.weaponKills));
             
             updateUI();
-            
-            // 觸發 UI 更新
+            checkAchievements(); // 登入後立即檢查所有漏掉的成就
+            if (window.updateShopUI) window.updateShopUI();
             if (window.updateLoadoutUI) window.updateLoadoutUI();
         }
+    });
+
+    socket.on('achievementsList', (list) => {
+        gameState.achievements = list.map(a => a.achievement_id);
+        localStorage.setItem(getPlayerPrefix() + 'game_achievements', JSON.stringify(gameState.achievements));
+        if (window.updateAchievementsUI) window.updateAchievementsUI();
     });
 }
 
@@ -499,6 +778,9 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.domElement.style.display = 'block'; // 避免底部空白導致中心偏移
 document.body.appendChild(renderer.domElement);
+
+const controls = new PointerLockControls(camera, renderer.domElement);
+window.controls = controls;
 
 // 光照
 const light = new THREE.HemisphereLight(0xffffff, 0x444444, 2.0);
@@ -826,6 +1108,26 @@ function switchWeapon(id) {
         nozzle.rotation.x = Math.PI / 2; nozzle.position.z = -0.4;
         group.add(nozzle);
         currentWeaponMesh = group;
+    } else if (id === 'energy_rifle') {
+        const group = new THREE.Group();
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x004444, metalness: 0.9, roughness: 0.1 });
+        const coreMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2 });
+        
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.8), bodyMat);
+        group.add(body);
+        
+        const core = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6), coreMat);
+        core.rotation.x = Math.PI / 2;
+        core.position.z = -0.1;
+        group.add(core);
+        
+        const ringGeo = new THREE.TorusGeometry(0.06, 0.01, 8, 16);
+        for(let i=0; i<3; i++) {
+            const ring = new THREE.Mesh(ringGeo, coreMat);
+            ring.position.z = -0.2 - i*0.2;
+            group.add(ring);
+        }
+        currentWeaponMesh = group;
     } else if (id === 'paintball') {
         const group = new THREE.Group();
         const mat = new THREE.MeshStandardMaterial({ color: 0xff00ff });
@@ -854,12 +1156,18 @@ function switchWeapon(id) {
 window.unlockWeapon = (id) => {
     const config = weaponConfig[id];
     if (!config || gameState.unlockedWeapons.includes(id)) return false;
-    if (gameState.keys >= (config.cost || 0)) {
-        gameState.keys -= (config.cost || 0);
+    const price = config.cost || 0;
+    if (gameState.coins >= price) {
+        gameState.coins -= price;
+        gameState.keys = gameState.coins; // 同步 keys
         gameState.unlockedWeapons.push(id);
+        if (!gameState.owned_items.includes(id)) {
+            gameState.owned_items.push(id);
+        }
         saveGameProgress(); // 解鎖時存檔
         updateUI();
         sounds.pickup();
+        if (window.updateShopUI) window.updateShopUI();
         return true;
     }
     return false;
@@ -1060,7 +1368,6 @@ loader.load(modelUrl, (gltf) => {
 });
 
 // 控制
-const controls = new PointerLockControls(camera, document.body);
 const welcomeScreen = document.getElementById('welcome-screen');
 const startBtn = document.getElementById('start-game-btn');
 
@@ -1273,152 +1580,198 @@ function performRaycast(config, isRightClick) {
     const yOffset = 0.25;
 
     for (let i = 0; i < numRays; i++) {
-        // 使用 setFromCamera 並加入使用者自定義的偏移量
+        let currentStart = tracerStart.clone();
+        let currentDir = new THREE.Vector3();
+        
         if (i === 0 && !isShotgun) {
             raycaster.setFromCamera({ x: 0, y: yOffset }, camera);
+            currentDir.copy(raycaster.ray.direction);
         } else {
-            // 對於散彈槍或有擴散的情況，手動計算方向
             const camWorldDir = new THREE.Vector3();
             camera.getWorldDirection(camWorldDir);
-            let finalDir = camWorldDir.clone();
+            currentDir.copy(camWorldDir);
             
             const scatter = new THREE.Vector3(
                 (Math.random() - 0.5) * spread * 2,
                 (Math.random() - 0.5) * spread * 2,
                 (Math.random() - 0.5) * spread * 2
             );
-            finalDir.add(scatter).normalize();
-            raycaster.set(camWorldPos, finalDir);
+            currentDir.add(scatter).normalize();
         }
 
-        const intersects = raycaster.intersectObjects(targets, true);
+        let bounceCount = config.bounces ? 5 : 0;
+        let segmentStart = currentStart.clone();
 
-        let tracerEnd = new THREE.Vector3();
-        if (intersects.length > 0) {
-            const hit = intersects[0];
-            tracerEnd.copy(hit.point);
-            if (i === 0) explosionPos = tracerEnd.clone();
-            
-            // --- 命中邏輯 ---
-            if (!config.isBurn || hit.distance < 15) {
-                let obj = hit.object;
-                let enemyGroup = null;
-                if (obj.userData && obj.userData.parent) {
-                    enemyGroup = obj.userData.parent;
-                } else {
-                    let current = obj;
-                    while (current.parent) {
-                        if (current.parent.userData && (current.parent.userData.hp !== undefined || current.parent.userData.isPlayer)) {
-                            enemyGroup = current.parent;
-                            break;
+        for (let b = 0; b <= bounceCount; b++) {
+            raycaster.set(segmentStart, currentDir);
+            const intersects = raycaster.intersectObjects(targets, true);
+
+            let tracerEnd = new THREE.Vector3();
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                tracerEnd.copy(hit.point);
+                if (i === 0 && b === 0) explosionPos = tracerEnd.clone();
+                
+                // --- 命中邏輯 ---
+                if (!config.isBurn || hit.distance < 15) {
+                    let obj = hit.object;
+                    let enemyGroup = null;
+                    if (obj.userData && obj.userData.parent) {
+                        enemyGroup = obj.userData.parent;
+                    } else {
+                        let current = obj;
+                        while (current.parent) {
+                            if (current.parent.userData && (current.parent.userData.hp !== undefined || current.parent.userData.isPlayer)) {
+                                enemyGroup = current.parent;
+                                break;
+                            }
+                            current = current.parent;
                         }
-                        current = current.parent;
-                    }
-                }
-
-                if (enemyGroup && (enemyGroup.userData.isPlayer || enemyGroup.userData.hp > 0)) {
-                    const dist = hit.distance;
-                    let damage = config.damage * (gameState.isMega ? 3 : 1);
-                    
-                    // 技能效果：Berserker (傷害提升 50%)
-                    if (gameState.equippedSkill === 'berserker') {
-                        damage *= 1.5;
-                    }
-                    
-                    // 視覺反饋
-                    const modelContainer = enemyGroup.getObjectByName("modelContainer");
-                    const meshToFlash = modelContainer || enemyGroup;
-                    if (meshToFlash) {
-                        meshToFlash.traverse(node => {
-                            if (node.isMesh) {
-                                const originalColor = node.material.color.getHex();
-                                node.material.color.setHex(config.isBurn ? 0xff4500 : 0xffffff);
-                                setTimeout(() => { if(node.material) node.material.color.setHex(originalColor); }, 100);
-                            }
-                        });
                     }
 
-                    if (obj.userData.type === 'head') {
-                        // 技能效果：Precision (爆頭倍率 3.0x)
-                        const multiplier = gameState.equippedSkill === 'precision' ? 3.0 : 2.5;
-                        damage *= multiplier;
-                    }
-
-                    if (enemyGroup.userData.isPlayer && socket) {
-                        socket.emit('playerHit', { targetId: enemyGroup.userData.playerId, damage: damage });
-                    } else if (enemyGroup.userData.hp !== undefined) {
-                        if (config.isBurn) enemyGroup.userData.burnTicks = 10;
-                        if (config.type === 'melee') {
-                            if (dist > 3) continue;
-                            if (isRightClick) {
-                                const pDir = new THREE.Vector3();
-                                camera.getWorldDirection(pDir);
-                                const eDir = new THREE.Vector3(0,0,-1).applyQuaternion(enemyGroup.quaternion);
-                                if (pDir.dot(eDir) > 0.7) damage = 150;
-                            }
-                        } 
+                    if (enemyGroup && (enemyGroup.userData.isPlayer || enemyGroup.userData.hp > 0)) {
+                        const dist = hit.distance;
+                        let damage = config.damage * (gameState.isMega ? 3 : 1);
                         
-                        enemyGroup.userData.hp -= damage;
+                        if (gameState.equippedSkills.includes('berserker')) {
+                            damage *= 1.5;
+                        }
                         
-                        const hpBarFill = enemyGroup.getObjectByName("hpBarFill");
-                        if (hpBarFill) {
-                            const hpPercent = Math.max(0, enemyGroup.userData.hp / enemyGroup.userData.maxHP);
-                            hpBarFill.scale.x = hpPercent;
-                            hpBarFill.position.x = (hpPercent - 1) * 0.5;
-                            if (hpPercent < 0.3) hpBarFill.material.color.setHex(0xff0000);
-                            else if (hpPercent < 0.6) hpBarFill.material.color.setHex(0xffff00);
+                        const modelContainer = enemyGroup.getObjectByName("modelContainer");
+                        const meshToFlash = modelContainer || enemyGroup;
+                        if (meshToFlash) {
+                            meshToFlash.traverse(node => {
+                                if (node.isMesh) {
+                                    const originalColor = node.material.color.getHex();
+                                    node.material.color.setHex(config.isBurn ? 0xff4500 : 0xffffff);
+                                    setTimeout(() => { if(node.material) node.material.color.setHex(originalColor); }, 100);
+                                }
+                            });
                         }
 
-                        if (enemyGroup.userData.hp <= 0) {
-                            sounds.death();
+                        if (obj.userData.type === 'head') {
+                            const multiplier = gameState.equippedSkill === 'precision' ? 3.0 : 2.5;
+                            damage *= multiplier;
+                        }
+
+                        if (enemyGroup.userData.isPlayer && socket) {
+                            socket.emit('playerHit', { targetId: enemyGroup.userData.playerId, damage: damage });
+                        } else if (enemyGroup.userData.hp !== undefined) {
+                            if (config.isBurn) enemyGroup.userData.burnTicks = 10;
+                            if (config.type === 'melee') {
+                                if (dist > 3) continue;
+                                if (isRightClick) {
+                                    const pDir = new THREE.Vector3();
+                                    camera.getWorldDirection(pDir);
+                                    const eDir = new THREE.Vector3(0,0,-1).applyQuaternion(enemyGroup.quaternion);
+                                    if (pDir.dot(eDir) > 0.7) damage = 150;
+                                }
+                            } 
                             
-                            // 技能效果：Scavenger (獎勵加倍)
-                            const keyReward = gameState.equippedSkill === 'scavenger' ? 20 : 10;
-                            gameState.keys += keyReward;
-
-                            // 技能效果：Vampiric (擊殺回血)
-                            if (gameState.equippedSkill === 'vampiric') {
-                                gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 50);
+                            enemyGroup.userData.hp -= damage;
+                            
+                            const hpBarFill = enemyGroup.getObjectByName("hpBarFill");
+                            if (hpBarFill) {
+                                const hpPercent = Math.max(0, enemyGroup.userData.hp / enemyGroup.userData.maxHP);
+                                hpBarFill.scale.x = hpPercent;
+                                hpBarFill.position.x = (hpPercent - 1) * 0.5;
+                                if (hpPercent < 0.3) hpBarFill.material.color.setHex(0xff0000);
+                                else if (hpPercent < 0.6) hpBarFill.material.color.setHex(0xffff00);
                             }
 
-                            saveGameProgress();
-                            updateUI();
-                            if (Math.random() < 0.15) spawnHealthPack(enemyGroup.position);
-                            scene.remove(enemyGroup);
-                            const idx = enemies.indexOf(enemyGroup);
-                            if (idx > -1) enemies.splice(idx, 1);
-                            gameState.kills++;
-                            if (enemies.length === 0) { gameState.wave++; canSpawnWave = true; }
+                            if (enemyGroup.userData.hp <= 0) {
+                                sounds.death();
+                                if (gameState.achievements.includes(`gold_${gameState.currentSlot}`)) {
+                                    spawnGoldenStatue(enemyGroup.position, enemyGroup.quaternion);
+                                }
+
+                                let keyReward = gameState.equippedSkills.includes('scavenger') ? 20 : 10;
+                                if (gameState.owned_items.includes('vip')) {
+                                    keyReward = Math.floor(keyReward * 1.5);
+                                }
+                                gameState.keys += keyReward;
+
+                                if (gameState.equippedSkills.includes('vampiric')) {
+                                    gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 50);
+                                }
+
+                                if (gameState.level < 50) {
+                                    gameState.xp += 10;
+                                    const requiredXP = 200 + (gameState.level - 1) * 20;
+                                    if (gameState.xp >= requiredXP) {
+                                        gameState.xp -= requiredXP;
+                                        gameState.level++;
+                                        showLevelUpPopup(gameState.level);
+                                    }
+                                }
+
+                                saveGameProgress();
+                                updateUI();
+                                if (Math.random() < 0.15) spawnHealthPack(enemyGroup.position);
+                                scene.remove(enemyGroup);
+                                const idx = enemies.indexOf(enemyGroup);
+                                if (idx > -1) enemies.splice(idx, 1);
+                                
+                                const currentWeapon = gameState.currentSlot;
+                                gameState.weaponKills[currentWeapon] = (gameState.weaponKills[currentWeapon] || 0) + 1;
+                                
+                                gameState.kills++;
+                                checkAchievements();
+                                if (enemies.length === 0) { gameState.wave++; canSpawnWave = true; }
+                            }
                         }
                     }
                 }
-            }
-        } else {
-            raycaster.ray.at(100, tracerEnd);
-            if (i === 0) explosionPos = tracerEnd.clone();
-        }
 
-        // 顯示彈道
-        if (config.type !== 'melee') {
-            let color = config.isBurn ? 0xff4500 : 0xffff00;
-            if (config.type === 'paintball') {
-                const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
-                color = colors[Math.floor(Math.random() * colors.length)];
-            }
-            
-            if (config.isBurn) {
-                createFlame(tracerStart, tracerEnd);
+                // 顯示目前段落的彈道
+                let color = config.color || 0xffff00;
+                if (config.type === 'paintball') {
+                    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
+                    color = colors[Math.floor(Math.random() * colors.length)];
+                }
+                
+                if (config.isBurn) {
+                    createFlame(segmentStart, tracerEnd);
+                } else {
+                    createTracer(segmentStart, tracerEnd, color);
+                }
+
+                if (socket) {
+                    socket.emit('playerFire', { 
+                        start: segmentStart, 
+                        end: tracerEnd, 
+                        color: color,
+                        isBurn: config.isBurn 
+                    });
+                }
+
+                // 如果有反彈，計算下一段
+                if (config.bounces && b < bounceCount && hit.face) {
+                    const normal = hit.face.normal.clone();
+                    // 將法向量轉換到世界空間
+                    const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+                    normal.applyMatrix3(normalMatrix).normalize();
+                    
+                    currentDir.reflect(normal).normalize();
+                    segmentStart.copy(hit.point).addScaledVector(currentDir, 0.05);
+                } else {
+                    break;
+                }
             } else {
-                createTracer(tracerStart, tracerEnd, color);
-            }
+                raycaster.ray.at(1000, tracerEnd); // 射程無限 (1000 單位)
+                if (i === 0 && b === 0) explosionPos = tracerEnd.clone();
+                
+                let color = config.color || 0xffff00;
+                if (config.isBurn) {
+                    createFlame(segmentStart, tracerEnd);
+                } else {
+                    createTracer(segmentStart, tracerEnd, color);
+                }
 
-            if (socket) {
-                socket.emit('playerFire', { 
-                    start: tracerStart, 
-                    end: tracerEnd, 
-                    color: color,
-                    isBurn: config.isBurn 
-                });
+                if (socket) {
+                    socket.emit('playerFire', { start: segmentStart, end: tracerEnd, color: color, isBurn: config.isBurn });
+                }
+                break;
             }
         }
     }
@@ -1431,8 +1784,21 @@ function performRaycast(config, isRightClick) {
                 e.userData.hp -= 200 * (1 - d/10);
                 if (e.userData.hp <= 0) {
                     sounds.death();
+                    
+                    // 擊殺特效：金色雕像
+                    if (gameState.achievements.includes(`gold_${gameState.currentSlot}`)) {
+                        spawnGoldenStatue(e.position, e.quaternion);
+                    }
+
                     gameState.keys += 10;
+                    
+                    // 更新武器擊殺數
+                    const currentWeapon = gameState.currentSlot;
+                    gameState.weaponKills[currentWeapon] = (gameState.weaponKills[currentWeapon] || 0) + 1;
+                    
                     gameState.kills++;
+                    checkAchievements(); // 檢查成就
+                    
                     saveGameProgress();
                     scene.remove(e);
                     enemies.splice(idx, 1);
@@ -1462,9 +1828,11 @@ document.addEventListener('mouseup', (e) => {
 document.addEventListener('contextmenu', e => e.preventDefault());
 
 let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+const keys = {};
 const velocity = new THREE.Vector3(), direction = new THREE.Vector3();
 
 document.addEventListener('keydown', (e) => {
+    keys[e.key.toLowerCase()] = true;
     switch (e.code) {
         case 'KeyW': moveForward = true; break;
         case 'KeyA': moveLeft = true; break;
@@ -1509,20 +1877,31 @@ window.setEquippedWeapons = (list) => {
     }
 };
 
-window.setEquippedSkill = (skill) => {
-    gameState.equippedSkill = skill;
-    console.log("Equipped skill:", skill);
+window.setEquippedSkill = (skills) => {
+    // 支援傳入單一字串或陣列
+    if (typeof skills === 'string') {
+        gameState.equippedSkills = skills ? [skills] : [];
+    } else if (Array.isArray(skills)) {
+        gameState.equippedSkills = skills;
+    }
     
-    // 重設為預設值，再套用新技能效果
+    console.log("Equipped skills:", gameState.equippedSkills);
+    
+    // 重設為預設值
     gameState.maxHP = 250;
     gameState.slideCooldown = 1500;
     
-    if (skill === 'shield') {
-        gameState.maxHP = 350;
-        if (gameState.playerHP < 350) gameState.playerHP = 350;
-    } else if (skill === 'shadow') {
-        gameState.slideCooldown = 750;
-    }
+    // 套用所有已裝備技能的效果
+    gameState.equippedSkills.forEach(skill => {
+        if (skill === 'shield') {
+            gameState.maxHP = 350;
+            if (gameState.playerHP < 350) gameState.playerHP = 350;
+        } else if (skill === 'shadow') {
+            gameState.slideCooldown = 750;
+        } else if (skill === 'timestop') {
+            // 時間暫停技能初始化 (如果需要)
+        }
+    });
     
     updateUI();
 };
@@ -1533,6 +1912,7 @@ document.addEventListener('wheel', (e) => {
     // 只有一把武器，不需切換
 });
 document.addEventListener('keyup', (e) => {
+    keys[e.key.toLowerCase()] = false;
     switch (e.code) {
         case 'KeyW': moveForward = false; break;
         case 'KeyA': moveLeft = false; break;
@@ -1553,6 +1933,17 @@ function updateUI() {
     if (hpBar && hpText) {
         hpBar.style.width = `${(gameState.playerHP / gameState.maxHP) * 100}%`;
         hpText.innerText = Math.max(0, Math.floor(gameState.playerHP));
+    }
+
+    // 更新等級與 XP UI
+    const levelDisp = document.getElementById('level-display');
+    const xpDisp = document.getElementById('xp-display');
+    const xpBarFill = document.getElementById('xp-bar-fill');
+    if (levelDisp && xpDisp && xpBarFill) {
+        const requiredXP = 200 + (gameState.level - 1) * 20;
+        levelDisp.innerText = `LV.${gameState.level}`;
+        xpDisp.innerText = `${gameState.xp} / ${requiredXP} XP`;
+        xpBarFill.style.width = `${(gameState.xp / requiredXP) * 100}%`;
     }
 
     // 更新波次顯示
@@ -1588,6 +1979,16 @@ function updateUI() {
     }
     keyDisplay.innerText = `KEYS: 🔑 ${gameState.keys}`;
     if (window.updateModalKeys) window.updateModalKeys(gameState.keys);
+    
+    // 更新歡迎介面金幣與鑰匙
+    const welcomeKey = document.getElementById('welcome-key-count');
+    const welcomeCoin = document.getElementById('welcome-coin-count');
+    if (welcomeKey) welcomeKey.innerText = gameState.keys;
+    if (welcomeCoin) welcomeCoin.innerText = gameState.coins;
+
+    // 更新商店金幣顯示 (兩者獨立)
+    const coinDisplay = document.getElementById('shop-coin-display');
+    if (coinDisplay) coinDisplay.innerText = gameState.coins;
 
     // 更新 MEGA 狀態顯示
     let megaDisplay = document.getElementById('mega-display');
@@ -1637,17 +2038,15 @@ function updateUI() {
 
     // 更新彈藥顯示
     const ammoText = document.getElementById('ammo-text');
-    const maxAmmoText = document.getElementById('max-ammo-text');
-    if (ammoText && maxAmmoText) {
+    if (ammoText) {
         const currentAmmo = gameState.currentAmmo[gameState.currentSlot];
-        const maxAmmo = weaponConfig[gameState.currentSlot].ammo;
         ammoText.innerText = currentAmmo === Infinity ? '∞' : currentAmmo;
-        maxAmmoText.innerText = maxAmmo === Infinity ? '∞' : maxAmmo;
-        
-        // 如果正在換彈，顯示文字已在 reload() 中處理
         if (gameState.isReloading) ammoText.innerText = "換彈中...";
     }
 }
+window.updateUI = updateUI;
+
+// --- 商店系統已遷移至 game.html ---
 
 let prevTime = performance.now();
 let lastMoveEmit = 0;
@@ -1656,6 +2055,27 @@ function animate() {
     requestAnimationFrame(animate);
     const time = performance.now();
     const delta = (time - prevTime) / 1000;
+
+    // 處理時間暫停技能 (F鍵啟動, 30s冷卻)
+    if (gameState.equippedSkills.includes('timestop')) {
+        if (!window.timeStopCooldown) window.timeStopCooldown = 0;
+        if (keys['f'] && time - window.timeStopCooldown > 30000 && !window.isTimeStopped) {
+            window.isTimeStopped = true;
+            window.timeStopCooldown = time;
+            
+            // 畫面變黃特效
+            const overlay = document.createElement('div');
+            overlay.id = 'time-stop-overlay';
+            overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,0,0.3);pointer-events:none;z-index:9999;mix-blend-mode:overlay;";
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => {
+                window.isTimeStopped = false;
+                const o = document.getElementById('time-stop-overlay');
+                if(o) o.remove();
+            }, 10000);
+        }
+    }
 
     // 更新其他玩家的平滑位移與動畫
     Object.keys(otherPlayers).forEach(id => {
@@ -1741,139 +2161,144 @@ function animate() {
             lastMoveEmit = time;
         }
 
-        mixers.forEach(mixer => mixer.update(delta));
-        enemies.forEach(enemy => {
-            const dist = enemy.position.distanceTo(camera.position);
-            enemy.lookAt(camera.position.x, 0, camera.position.z);
+        if (!window.isTimeStopped) {
+            mixers.forEach(mixer => mixer.update(delta));
+            enemies.forEach((enemy, enemyIdx) => {
+                const dist = enemy.position.distanceTo(camera.position);
+                enemy.lookAt(camera.position.x, 0, camera.position.z);
 
-            // NPC 移動邏輯：朝玩家靠近 (只在水平面移動)
-            if (dist > 5 && dist < 100) {
-                const moveDir = new THREE.Vector3();
-                // 只取玩家的 X 和 Z 坐標，忽略高度 (Y)，防止敵人因為玩家變大或跳躍而飛起來
-                const targetPos = new THREE.Vector3(camera.position.x, enemy.position.y, camera.position.z);
-                moveDir.subVectors(targetPos, enemy.position).normalize();
-                enemy.position.addScaledVector(moveDir, 12.0 * delta); 
-                enemy.position.y = 0; // 強制固定在地面
-            }
+                // NPC 移動邏輯：朝玩家靠近 (只在水平面移動)
+                if (dist > 5 && dist < 100) {
+                    const moveDir = new THREE.Vector3();
+                    const targetPos = new THREE.Vector3(camera.position.x, enemy.position.y, camera.position.z);
+                    moveDir.subVectors(targetPos, enemy.position).normalize();
+                    enemy.position.addScaledVector(moveDir, 12.0 * delta); 
+                    enemy.position.y = 0; // 強制固定在地面
+                }
 
-            // 處理燃燒傷害 (DOT)
-            if (enemy.userData.burnTicks > 0) {
-                if (time - enemy.userData.lastBurnTime > 500) {
-                    enemy.userData.hp -= 10;
-                    enemy.userData.burnTicks--;
-                    enemy.userData.lastBurnTime = time;
-                    
-                    // 檢查燃燒是否致死
-                    if (enemy.userData.hp <= 0) {
-                        sounds.death();
+                // 處理燃燒傷害 (DOT)
+                if (enemy.userData.burnTicks > 0) {
+                    if (time - enemy.userData.lastBurnTime > 500) {
+                        enemy.userData.hp -= 10;
+                        enemy.userData.burnTicks--;
+                        enemy.userData.lastBurnTime = time;
                         
-                        // 技能效果：Scavenger (獎勵加倍)
-                        const keyReward = gameState.equippedSkill === 'scavenger' ? 20 : 10;
-                        gameState.keys += keyReward;
+                        // 檢查燃燒是否致死
+                        if (enemy.userData.hp <= 0) {
+                            sounds.death();
+                            if (gameState.achievements.includes('gold_flamethrower')) {
+                                spawnGoldenStatue(enemy.position, enemy.quaternion);
+                            }
 
-                        // 技能效果：Vampiric (擊殺回血)
-                        if (gameState.equippedSkill === 'vampiric') {
-                            gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 50);
+                            let keyReward = gameState.equippedSkills.includes('scavenger') ? 20 : 10;
+                            if (gameState.owned_items.includes('vip')) keyReward = Math.floor(keyReward * 1.5);
+                            gameState.keys += keyReward;
+
+                            if (gameState.equippedSkills.includes('vampiric')) {
+                                gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 50);
+                            }
+                            
+                            const currentWeapon = gameState.currentSlot;
+                            gameState.weaponKills[currentWeapon] = (gameState.weaponKills[currentWeapon] || 0) + 1;
+                            gameState.kills++;
+                            checkAchievements();
+                            
+                            saveGameProgress();
+                            updateUI();
+                            if (Math.random() < 0.15) spawnHealthPack(enemy.position);
+                            scene.remove(enemy);
+                            enemies.splice(enemyIdx, 1);
+                            if (enemies.length === 0) { gameState.wave++; canSpawnWave = true; }
+                            return;
                         }
 
-                        gameState.kills++;
-                        saveGameProgress(); // 燃燒致死時存檔
-                        scene.remove(enemy);
-                        const idx = enemies.indexOf(enemy);
-                        if (idx > -1) enemies.splice(idx, 1);
-                        if (enemies.length === 0) { gameState.wave++; canSpawnWave = true; }
-                        updateUI();
-                    }
-                    
-                    // 燃燒視覺效果
-                    const modelContainer = enemy.getObjectByName("modelContainer");
-                    if (modelContainer) {
-                        modelContainer.traverse(node => {
-                            if (node.isMesh) {
-                                node.material.color.setHex(0xff4500);
-                                setTimeout(() => node.material.color.setHex(0x555555), 100);
-                            }
-                        });
+                        // 燃燒視覺效果
+                        const modelContainer = enemy.getObjectByName("modelContainer");
+                        if (modelContainer) {
+                            modelContainer.traverse(node => {
+                                if (node.isMesh) {
+                                    node.material.color.setHex(0xff4500);
+                                    setTimeout(() => { if(node.material) node.material.color.setHex(0x555555); }, 100);
+                                }
+                            });
+                        }
                     }
                 }
-            }
 
-            // 讓血量條始終面對玩家 (使用 lookAt 確保 Y 軸也對齊)
-            const hpBarBg = enemy.getObjectByName("hpBarBg");
-            if (hpBarBg) {
-                hpBarBg.lookAt(camera.position);
-            }
+                // 讓血量條始終面對玩家
+                const hpBarBg = enemy.getObjectByName("hpBarBg");
+                if (hpBarBg) {
+                    hpBarBg.lookAt(camera.position);
+                }
 
-            if (dist < enemy.userData.attackRange) {
-                const now = time;
-                const isElite = enemy.userData.type === 'elite';
-                const isBoss = enemy.userData.type === 'boss';
-                
-                // BOSS 漆彈槍邏輯
-                if (isBoss) {
-                    if (enemy.userData.isReloading) return;
-                    if (now - enemy.userData.lastAttackTime > 300) { // 漆彈射速
-                        if (enemy.userData.currentAmmo > 0) {
+                // 敵人攻擊邏輯
+                if (dist < enemy.userData.attackRange) {
+                    const now = time;
+                    const isElite = enemy.userData.type === 'elite';
+                    const isBoss = enemy.userData.type === 'boss';
+                    
+                    if (isBoss) {
+                        if (enemy.userData.isReloading) return;
+                        if (now - enemy.userData.lastAttackTime > 300) {
+                            if (enemy.userData.currentAmmo > 0) {
+                                gameState.playerHP -= enemy.userData.attackDamage;
+                                enemy.userData.currentAmmo--;
+                                enemy.userData.lastAttackTime = now;
+                                
+                                const enemyPos = new THREE.Vector3();
+                                enemy.getWorldPosition(enemyPos);
+                                enemyPos.y += 6.5;
+                                
+                                const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
+                                createTracer(enemyPos, camera.position, colors[Math.floor(Math.random() * colors.length)]);
+                            } else {
+                                enemy.userData.isReloading = true;
+                                setTimeout(() => {
+                                    enemy.userData.currentAmmo = enemy.userData.ammo;
+                                    enemy.userData.isReloading = false;
+                                }, enemy.userData.reloadTime);
+                            }
+                        }
+                    } else {
+                        const attackCooldown = isElite ? (enemy.userData.weaponType === 'machinegun' ? 200 : 1500) : 1000;
+
+                        if (now - enemy.userData.lastAttackTime > attackCooldown) {
                             gameState.playerHP -= enemy.userData.attackDamage;
-                            enemy.userData.currentAmmo--;
                             enemy.userData.lastAttackTime = now;
                             
                             const enemyPos = new THREE.Vector3();
                             enemy.getWorldPosition(enemyPos);
-                            enemyPos.y += 6.5; // BOSS 變大，射擊起點同步提高
+                            enemyPos.y += 1.3; 
                             
-                            // 漆彈彈道 (彩色)
-                            const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
-                            createTracer(enemyPos, camera.position, colors[Math.floor(Math.random() * colors.length)]);
-                        } else {
-                            // 換彈
-                            enemy.userData.isReloading = true;
-                            setTimeout(() => {
-                                enemy.userData.currentAmmo = enemy.userData.ammo;
-                                enemy.userData.isReloading = false;
-                            }, enemy.userData.reloadTime);
+                            let tracerColor = 0xff0000; 
+                            if (isElite) {
+                                if (enemy.userData.weaponType === 'flamethrower') tracerColor = 0xff4500;
+                                else if (enemy.userData.weaponType === 'rpg') tracerColor = 0xffff00;
+                            }
+                            
+                            createTracer(enemyPos, camera.position, tracerColor);
+
+                            if (isElite && enemy.userData.weaponType === 'rpg') {
+                                const sphere = new THREE.Mesh(new THREE.SphereGeometry(3), new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5 }));
+                                sphere.position.copy(camera.position);
+                                scene.add(sphere);
+                                setTimeout(() => scene.remove(sphere), 200);
+                                gameState.playerHP -= 5; 
+                            }
                         }
                     }
-                } else {
-                    // 普通與特種兵攻擊邏輯
-                    const attackCooldown = isElite ? (enemy.userData.weaponType === 'machinegun' ? 200 : 1500) : 1000;
-
-                    if (now - enemy.userData.lastAttackTime > attackCooldown) {
-                        gameState.playerHP -= enemy.userData.attackDamage;
-                        enemy.userData.lastAttackTime = now;
-                        
-                        // 顯示敵人彈道
-                        const enemyPos = new THREE.Vector3();
-                        enemy.getWorldPosition(enemyPos);
-                        enemyPos.y += 1.3; 
-                        
-                        let tracerColor = 0xff0000; 
-                        if (isElite) {
-                            if (enemy.userData.weaponType === 'flamethrower') tracerColor = 0xff4500;
-                            else if (enemy.userData.weaponType === 'rpg') tracerColor = 0xffff00;
-                        }
-                        
-                        createTracer(enemyPos, camera.position, tracerColor);
-
-                        if (isElite && enemy.userData.weaponType === 'rpg') {
-                            const sphere = new THREE.Mesh(new THREE.SphereGeometry(3), new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5 }));
-                            sphere.position.copy(camera.position);
-                            scene.add(sphere);
-                            setTimeout(() => scene.remove(sphere), 200);
-                            gameState.playerHP -= 5; 
-                        }
-                    }
-                }
 
                     const hpBar = document.getElementById('hp-bar');
                     if(hpBar) {
                         hpBar.style.backgroundColor = 'white';
-                        setTimeout(() => hpBar.style.backgroundColor = '#00ff00', 100);
+                        setTimeout(() => { if(hpBar) hpBar.style.backgroundColor = '#00ffff'; }, 100);
                     }
                 }
-        });
+            });
+        }
+
         if (gameState.playerHP <= 0) {
-            saveGameProgress(); // 死亡前最後存檔
+            saveGameProgress(); 
             alert("你被擊敗了！生存了 " + (gameState.wave - 1) + " 波。");
             location.reload();
             return;
@@ -1881,8 +2306,6 @@ function animate() {
 
         // 物理更新
         velocity.y -= GRAVITY * delta;
-        
-        // 使用指數衰減以獲得更穩定的摩擦力
         const damping = Math.exp(-10.0 * delta);
         velocity.x *= damping;
         velocity.z *= damping;
@@ -1890,21 +2313,14 @@ function animate() {
         direction.z = Number(moveForward) - Number(moveBackward);
         direction.x = Number(moveRight) - Number(moveLeft);
         
-        if (direction.lengthSq() > 0) {
-            direction.normalize();
-        }
+        if (direction.lengthSq() > 0) direction.normalize();
         
         let currentSpeed = 400.0;
-        
-        // 技能效果：Adrenaline (殘血加速)
-        if (gameState.equippedSkill === 'adrenaline' && gameState.playerHP < 50) {
-            currentSpeed *= 1.4;
-        }
+        if (gameState.equippedSkills.includes('adrenaline') && gameState.playerHP < 50) currentSpeed *= 1.4;
 
         if (gameState.isSliding) {
             currentSpeed = 800.0;
             if (performance.now() - gameState.slideTime > 500) {
-                // 自動結束滑行
                 gameState.isSliding = false;
                 camera.position.y += 0.8;
             }
@@ -1916,7 +2332,6 @@ function animate() {
         controls.moveRight(-velocity.x * delta);
         controls.moveForward(-velocity.z * delta);
 
-        // 限制玩家位置在地圖內
         const halfSize = MAP_SIZE / 2 - 2;
         camera.position.x = Math.max(-halfSize, Math.min(halfSize, camera.position.x));
         camera.position.z = Math.max(-halfSize, Math.min(halfSize, camera.position.z));
@@ -1933,9 +2348,7 @@ function animate() {
         // 撿取物品
         items.forEach((item, index) => {
             const dist = item.position.distanceTo(camera.position);
-            
-            // 技能效果：Magnetic (磁吸物品)
-            if (gameState.equippedSkill === 'magnetic' && dist < 15 && dist > 2) {
+            if (gameState.equippedSkills.includes('magnetic') && dist < 15 && dist > 2) {
                 const pullDir = new THREE.Vector3().subVectors(camera.position, item.position).normalize();
                 item.position.addScaledVector(pullDir, 15 * delta);
             }
@@ -1943,60 +2356,35 @@ function animate() {
             if (dist < 2) {
                 sounds.pickup();
                 if (item.userData.type === 'health') {
-                    // 技能限制：Berserker (不能撿補血包)
-                    if (gameState.equippedSkill === 'berserker') {
-                        // 可以撥放個音效或顯示提示
-                        return; 
-                    }
+                    if (gameState.equippedSkills.includes('berserker')) return; 
                     gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 50);
                     scene.remove(item);
                     items.splice(index, 1);
                     updateUI();
                 } else if (item.userData.type === 'mega') {
-                    // 變大綠色模式
                     gameState.isMega = true;
                     gameState.megaTime = time;
                     gameState.maxHP = 500;
-                    gameState.playerHP = 500; // 提升血量並補滿
+                    gameState.playerHP = 500;
                     scene.remove(item);
                     items.splice(index, 1);
-                    
-                    // 放大武器
                     weaponGroup.scale.set(2, 2, 2);
-                    
-                    // 變大效果 UI 提示
-                    const megaText = document.createElement('div');
-                    megaText.innerText = "MEGA MODE: ON 🟢\nDAMAGE x3 | HP UP";
-                    megaText.style.position = 'absolute';
-                    megaText.style.top = '15%';
-                    megaText.style.left = '50%';
-                    megaText.style.color = '#00ff00';
-                    megaText.style.fontSize = '32px';
-                    megaText.style.fontWeight = 'bold';
-                    megaText.style.textAlign = 'center';
-                    megaText.style.transform = 'translateX(-50%)';
-                    megaText.style.textShadow = '2px 2px 4px black';
-                    document.body.appendChild(megaText);
-                    setTimeout(() => { if(megaText.parentNode) document.body.removeChild(megaText); }, 3000);
+                    updateUI();
                 }
             }
         });
 
-        // 處理變大效果結束
         if (gameState.isMega) {
-            // 讓畫面變綠色 (簡單效果)
             renderer.setClearColor(0x002200, 1);
-            if (time - gameState.megaTime > 15000) { // 持續 15 秒
+            if (time - gameState.megaTime > 15000) {
                 gameState.isMega = false;
                 gameState.maxHP = 250;
                 gameState.playerHP = Math.min(250, gameState.playerHP);
                 renderer.setClearColor(0x000000, 1);
-                scene.background = new THREE.Color(0x87ceeb);
                 weaponGroup.scale.set(1, 1, 1);
             }
         }
 
-        // 檢查波次
         if (enemies.length === 0 && canSpawnWave) spawnWave();
     }
     prevTime = time;

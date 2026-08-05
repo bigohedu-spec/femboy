@@ -86,10 +86,11 @@
         .subtitle {
             margin-top: 5px;
             margin-bottom: 35px;
-            opacity: 0.6;
+            opacity: 0.9;
             font-size: 0.9em;
             letter-spacing: 3px;
             text-transform: uppercase;
+            color: #fff;
         }
         .nav-buttons {
             display: flex;
@@ -197,7 +198,7 @@
             font-size: 14px;
             font-weight: bold;
             transition: 0.3s;
-            opacity: 0.6;
+            opacity: 0.9;
             letter-spacing: 2px;
         }
         .navbar a:hover {
@@ -209,13 +210,121 @@
             color: #fff;
             border-bottom: 2px solid #00ffff;
         }
+
+        /* 載入畫面樣式 - 強化美化版 */
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #001a1a 0%, #000 100%);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            overflow: hidden;
+        }
+        #loading-overlay::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 10000;
+        }
+        .loading-box {
+            width: 450px;
+            text-align: center;
+            position: relative;
+            padding: 40px;
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            background: rgba(0, 20, 20, 0.5);
+            backdrop-filter: blur(5px);
+        }
+        .loading-text {
+            color: var(--neon-blue);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.5em;
+            font-weight: 900;
+            letter-spacing: 6px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px var(--neon-blue);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.98); }
+        }
+        .loading-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 0;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        #loading-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #004444, var(--neon-blue));
+            box-shadow: 0 0 20px var(--neon-blue);
+            transition: width 0.1s linear;
+            position: relative;
+        }
+        #loading-bar-fill::after {
+            content: "";
+            position: absolute;
+            top: 0; right: 0; width: 10px; height: 100%;
+            background: #fff;
+            box-shadow: 0 0 10px #fff;
+        }
+        #loading-percentage {
+            margin-top: 15px;
+            color: var(--neon-blue);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.1em;
+            font-weight: bold;
+            opacity: 0.9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .loading-decoration {
+            position: absolute;
+            font-size: 10px;
+            color: rgba(0, 255, 255, 0.3);
+            font-family: monospace;
+            text-transform: uppercase;
+        }
+        .top-left { top: 10px; left: 10px; }
+        .bottom-right { bottom: 10px; right: 10px; }
     </style>
 </head>
 <body>
+    <div id="loading-overlay">
+        <div class="loading-box">
+            <div class="loading-decoration top-left">System Auth: Verified</div>
+            <div class="loading-text" id="loading-status">INITIALIZING</div>
+            <div class="loading-bar-bg">
+                <div id="loading-bar-fill"></div>
+            </div>
+            <div id="loading-percentage">
+                <span>PROGRESS</span>
+                <span id="percent-num">0%</span>
+            </div>
+            <div class="loading-decoration bottom-right">Cyber-Core v2.4.0</div>
+        </div>
+    </div>
     <nav class="navbar">
         <a href="index.html" class="active">HOME</a>
         <a href="game.html">BATTLE</a>
         <a href="skills.html">SKILLS</a>
+        <a href="features.html">FEATURES</a>
+        <a href="game.html?openShop=true">SHOP</a>
         <a href="tutorial.html">TUTORIAL</a>
         <a href="leaderboard.html">RANKING</a>
         <a href="credits.html">ABOUT</a>
@@ -237,13 +346,13 @@
         </div>
 
         <div class="nav-buttons">
-            <a href="game.html" class="nav-btn primary" data-i18n="main-start">LAUNCH GAME</a>
+            <a href="javascript:void(0)" onclick="startLoadingGame()" class="nav-btn primary" data-i18n="main-start">LAUNCH GAME</a>
             <a href="tutorial.html" class="nav-btn" data-i18n="main-tutorial">HOW TO PLAY</a>
             <a href="leaderboard.html" class="nav-btn" data-i18n="main-rank-btn">LEADERBOARD</a>
         </div>
 
         <div class="stats-preview">
-            <span data-i18n="main-credits">CREDITS</span>: 🔑 <span id="key-display">300</span>
+            🪙 <span id="coin-display">300</span> | 🔑 <span id="key-display">300</span>
         </div>
     </div>
 
@@ -266,8 +375,49 @@
         const currentNickname = localStorage.getItem('playerNickname') || 'guest';
         const savedKeysRaw = localStorage.getItem(currentNickname + '_game_keys');
         const savedKeys = savedKeysRaw !== null ? savedKeysRaw : '300';
+        const savedCoinsRaw = localStorage.getItem(currentNickname + '_game_coins');
+        const savedCoins = savedCoinsRaw !== null ? savedCoinsRaw : savedKeys;
+        
         document.getElementById('key-display').innerText = savedKeys;
+        document.getElementById('coin-display').innerText = savedCoins;
         document.getElementById('display-nickname').textContent = currentNickname;
+
+        function startLoadingGame() {
+            const overlay = document.getElementById('loading-overlay');
+            const barFill = document.getElementById('loading-bar-fill');
+            const percentNum = document.getElementById('percent-num');
+            const statusText = document.getElementById('loading-status');
+            
+            overlay.style.display = 'flex';
+            let progress = 0;
+            
+            const messages = [
+                "ESTABLISHING LINK",
+                "SYNCING DATA-STREAM",
+                "LOADING VIRTUAL ASSETS",
+                "CALIBRATING NEURAL CORE",
+                "ACCESS GRANTED"
+            ];
+
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 6) + 3; // 3-9%
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        window.location.href = 'game.html';
+                    }, 500);
+                }
+                
+                barFill.style.width = progress + '%';
+                if (percentNum) percentNum.innerText = progress + '%';
+                
+                // 根據進度切換文字
+                const msgIndex = Math.min(messages.length - 1, Math.floor(progress / 20));
+                statusText.innerText = messages[msgIndex];
+                
+            }, 100); 
+        }
 
         function logout() {
             if (confirm('確定要登出並更改暱稱嗎？')) {

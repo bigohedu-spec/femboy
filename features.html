@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FEATURES - 3D Survival Arena</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --neon-blue: #00ffff;
+            --neon-yellow: #ffff00;
+            --neon-purple: #bc13fe;
+            --bg-dark: #000a0a;
+            --success: #00ff88;
+            --warning: #ffcc00;
+            --danger: #ff4444;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at center, #001515 0%, #000 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 15px 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        .navbar a {
+            color: #00ffff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            transition: 0.3s;
+            opacity: 0.9;
+            letter-spacing: 2px;
+        }
+        .navbar a:hover { opacity: 1; text-shadow: 0 0 10px #00ffff; }
+
+        .container {
+            max-width: 1000px;
+            margin: 100px auto 50px;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        .header h1 {
+            font-size: 3em;
+            color: var(--neon-blue);
+            letter-spacing: 10px;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            margin: 0;
+        }
+        .header p {
+            opacity: 0.7;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 25px;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--neon-blue);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.1);
+            background: rgba(0, 255, 255, 0.02);
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .status-available { background: rgba(0, 255, 136, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .status-fixing { background: rgba(255, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+
+        .feature-icon {
+            font-size: 2.5em;
+            color: var(--neon-blue);
+            margin-bottom: 15px;
+        }
+        .feature-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        .feature-desc {
+            font-size: 0.9em;
+            color: #aaa;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .try-btn {
+            display: inline-block;
+            padding: 12px 20px;
+            background: transparent;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            text-decoration: none;
+            text-align: center;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .try-btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 20px var(--neon-blue);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html">HOME</a>
+        <a href="game.html">BATTLE</a>
+        <a href="skills.html">SKILLS</a>
+        <a href="features.html" style="color: white; border-bottom: 2px solid #00ffff;">FEATURES</a>
+        <a href="leaderboard.html">RANKING</a>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>SYSTEM FEATURES</h1>
+            <p>系統功能清單與狀態</p>
+        </div>
+
+        <div class="feature-grid">
+            <!-- 🎮 核心戰鬥 -->
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-running"></i></div>
+                <div class="feature-name">戰術動作控制</div>
+                <div class="feature-desc">支援跳躍、滑行（Tactical Slide）與動態視角縮放，提供流暢的戰鬥操作體驗。</div>
+            </div>
+
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-skull"></i></div>
+                <div class="feature-name">波次生存挑戰</div>
+                <div class="feature-desc">動態生成的敵人與 BOSS（漆彈槍型），隨時間增加的生存難度與掉落物系統。</div>
+            </div>
+
+            <!-- ⚙️ 技術架構 -->
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-users"></i></div>
+                <div class="feature-name">多人即時連線</div>
+                <div class="feature-desc">基於 Socket.IO 的即時同步技術，實現玩家位置、開火、受傷等動作的全域同步。</div>
+            </div>
+
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-cloud"></i></div>
+                <div class="feature-name">Supabase 雲端同步</div>
+                <div class="feature-desc">完整的玩家資料雲端備份，支援暱稱登入、自動遷移本地資料至雲端資料庫。</div>
+            </div>
+
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-music"></i></div>
+                <div class="feature-name">程式化音效引擎</div>
+                <div class="feature-desc">使用 Web Audio API 即時生成槍聲與環境音，無需下載龐大音訊檔即可擁有震撼體驗。</div>
+            </div>
+
+            <!-- 🏆 成長與收藏 -->
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-trophy"></i></div>
+                <div class="feature-name">動態成就室</div>
+                <div class="feature-desc">12+ 挑戰目標，解鎖後文字轉為彩色漸層，並在遊戲中生成實體「金色雕像」獎勵。</div>
+            </div>
+
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+                <div class="feature-name">技能增強系統</div>
+                <div class="feature-desc">被動技能樹系統，包含擊殺回血、金鑰磁鐵、影子滑行等戰術強化。</div>
+            </div>
+
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-list-ol"></i></div>
+                <div class="feature-name">全球即時排行榜</div>
+                <div class="feature-desc">展示擊殺總數與財富（金鑰）排行榜，數據隨時與所有線上玩家同步更新。</div>
+            </div>
+
+            <!-- 🌐 UI/UX 與體驗 -->
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-language"></i></div>
+                <div class="feature-name">多國語系切換</div>
+                <div class="feature-desc">全介面支援中英文切換，包含所有武器描述、成就提示與教學內容。</div>
+            </div>
+
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-palette"></i></div>
+                <div class="feature-name">Cyberpunk 視覺美學</div>
+                <div class="feature-desc">極致深色模式、霓虹發光特效與即時發光文字（Glow Text），打造沉浸式體驗。</div>
+            </div>
+
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-graduation-cap"></i></div>
+                <div class="feature-name">互動式戰鬥教學</div>
+                <div class="feature-desc">完整的操作指南與提示系統，幫助新玩家快速上手戰場與系統機制。</div>
+            </div>
+
+            <!-- 🕒 未來開發 -->
+            <div class="feature-card">
+                <span class="status-badge status-available">可用</span>
+                <div class="feature-icon"><i class="fas fa-quote-right"></i></div>
+                <div class="feature-name">動態隨機名言</div>
+                <div class="feature-desc">串接外部 API 即時獲取勵志金句，目前已整合於關於（Credits）頁面，為玩家提供戰鬥餘暇的啟發。</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

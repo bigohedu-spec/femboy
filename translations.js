@@ -31,7 +31,9 @@
         's-shadow': '影子滑行',
         's-precision': '致命精準',
         's-berserker': '狂暴之魂',
-        's-magnetic': '金鑰磁鐵'
+        's-magnetic': '金鑰磁鐵',
+        's-timestop': '時間暫停 (LV.50)',
+        'w-energy_rifle': '傳奇能量步槍'
     },
     'en': {
         'nav-home': 'HOME',

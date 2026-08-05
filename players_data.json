@@ -1,6 +1,7 @@
 {
   "wesleygogo999": {
-    "keys": 2300,
+    "keys": 1730,
+    "coins": 3320,
     "unlockedWeapons": [
       "rifle",
       "knife",
@@ -11,7 +12,9 @@
       "machinegun",
       "rpg",
       "flamethrower",
-      "energy"
+      "energy",
+      "vip",
+      "energy_rifle"
     ],
     "unlockedSkills": [
       "scavenger",
@@ -21,8 +24,20 @@
       "berserker",
       "vampiric",
       "adrenaline",
-      "shield"
-    ]
+      "shield",
+      "timestop"
+    ],
+    "owned_items": [
+      "vip"
+    ],
+    "weaponKills": {
+      "rifle": 91,
+      "energy": 72,
+      "flamethrower": 8,
+      "machinegun": 114,
+      "paintball": 111,
+      "pistol": 8
+    }
   },
   "dfdsfadfd": {
     "keys": 7430,
