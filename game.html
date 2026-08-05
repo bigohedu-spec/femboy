@@ -1354,9 +1354,9 @@
         window.socket = socket; // 讓 game.js 可以使用
 
         // 自動同步登入狀態
-        const nickname = localStorage.getItem('playerNickname');
-        if (nickname) {
-            socket.emit('login', nickname);
+        const loginNickname = localStorage.getItem('playerNickname');
+        if (loginNickname) {
+            socket.emit('login', loginNickname);
         }
 
         // 1. 創造全新房間
