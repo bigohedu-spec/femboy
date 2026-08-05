@@ -540,10 +540,14 @@
                 </div>
                 
                 <div id="room-status" style="font-size: 11px; color: #888; margin-top: 5px;">STATUS: PUBLIC SERVER</div>
+                <button class="secondary-btn" onclick="leaveRoom()" style="border-color: #555; color: #888; padding: 5px 15px; font-size: 9px; margin-top: 5px;">BACK TO GLOBAL</button>
             </div>
         </div>
 
-        <button class="start-btn" id="start-game-btn" onclick="startGame()">INITIATE COMBAT</button>
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 490px;">
+            <button class="start-btn" id="start-game-btn" onclick="startGame()" style="width: 100%;">INITIATE COMBAT</button>
+            <button class="secondary-btn" onclick="window.location.href='index.html'" style="width: 100%; border-color: #444; color: #666; margin: 0;">EXIT TO MAIN MENU</button>
+        </div>
         
         <div style="margin-top: 20px; display: flex; gap: 20px; font-size: 10px; opacity: 0.3; letter-spacing: 2px;">
             <span>WASD: MOVE</span>
@@ -1385,6 +1389,13 @@
         socket.on('duelError', (msg) => {
             alert(msg);
         });
+
+        function leaveRoom() {
+            socket.emit('joinDuel', 'global');
+            document.getElementById('room-status').innerText = `STATUS: PUBLIC SERVER`;
+            document.getElementById('room-status').style.color = '#888';
+            document.getElementById('room-code-input').value = '';
+        }
 
         // 顯示玩家暱稱
         document.getElementById('player-name-display').textContent = localStorage.getItem('playerNickname') || '未知';

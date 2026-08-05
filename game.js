@@ -35,7 +35,12 @@ const sounds = {
         setTimeout(() => playSynthSound('sine', 600, 0.1, 0.05), 100);
     },
     death: () => playSynthSound('sawtooth', 50, 0.5, 0.3),
-    pickup: () => playSynthSound('triangle', 880, 0.2, 0.2)
+    pickup: () => playSynthSound('triangle', 880, 0.2, 0.2),
+    timestop: () => {
+        playSynthSound('sine', 200, 0.5, 0.3);
+        setTimeout(() => playSynthSound('sine', 150, 0.5, 0.3), 100);
+        setTimeout(() => playSynthSound('sine', 100, 0.8, 0.4), 200);
+    }
 };
 
 // 初始化場景
@@ -486,7 +491,7 @@ const weaponConfig = {
     energy_rifle: {
         name: '傳奇能量步槍',
         slot: 11,
-        damage: 20,
+        damage: 50,
         fireRate: 1000,
         color: 0x00ffff,
         size: [0.1, 0.2, 1.2],
@@ -1288,9 +1293,9 @@ function createEnemy(x, z, type = 'normal') {
 
 function createPlaceholder(type) {
     const p = new THREE.Group();
-    let color = 0x0000ff; // 普通敵人改為藍色
-    if (type === 'elite') color = 0x00ffff; // 精英改為青藍色
-    if (type === 'boss') color = 0x00008b; // BOSS 改為深藍色
+    let color = 0xff3333; // 普通敵人改為紅色
+    if (type === 'elite') color = 0xffaa00; // 精英改為橙色
+    if (type === 'boss') color = 0xff00ff; // BOSS 改為紫色
     
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: color }));
     body.position.y = 0.8;
@@ -1307,11 +1312,24 @@ function applyModelToGroup(container, type) {
     
     if (type === 'elite') {
         model.traverse(node => {
-            if (node.isMesh) node.material.color.setHex(0x00ffff); // 精英藍
+            if (node.isMesh) {
+                node.material = node.material.clone();
+                node.material.color.setHex(0xffaa00); // 精英橙
+            }
         });
     } else if (type === 'boss') {
         model.traverse(node => {
-            if (node.isMesh) node.material.color.setHex(0x00008b); // 深藍
+            if (node.isMesh) {
+                node.material = node.material.clone();
+                node.material.color.setHex(0xff00ff); // BOSS 紫
+            }
+        });
+    } else {
+        model.traverse(node => {
+            if (node.isMesh) {
+                node.material = node.material.clone();
+                node.material.color.setHex(0xff3333); // 普通紅
+            }
         });
     } else {
         model.traverse(node => {
@@ -1715,7 +1733,7 @@ function performRaycast(config, isRightClick) {
                                 gameState.keys += keyReward;
 
                                 if (gameState.equippedSkills.includes('vampiric')) {
-                                    gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 50);
+                                    gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 20);
                                 }
 
                                 if (gameState.level < 50) {
@@ -2081,10 +2099,11 @@ function animate() {
 
     // 處理時間暫停技能 (F鍵啟動, 30s冷卻)
     if (gameState.equippedSkills.includes('timestop')) {
-        if (!window.timeStopCooldown) window.timeStopCooldown = 0;
+        if (window.timeStopCooldown === undefined) window.timeStopCooldown = -30000;
         if (keys['f'] && time - window.timeStopCooldown > 30000 && !window.isTimeStopped) {
             window.isTimeStopped = true;
             window.timeStopCooldown = time;
+            if (sounds.timestop) sounds.timestop();
             
             // 畫面變黃特效
             const overlay = document.createElement('div');
@@ -2218,7 +2237,7 @@ function animate() {
                             gameState.keys += keyReward;
 
                             if (gameState.equippedSkills.includes('vampiric')) {
-                                gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 50);
+                                gameState.playerHP = Math.min(gameState.maxHP, gameState.playerHP + 20);
                             }
                             
                             const currentWeapon = gameState.currentSlot;
