@@ -79,33 +79,36 @@ const gameState = {
     megaTime: 0,
     weaponKills: {},
     achievements: [],
-    equippedSkills: [] // 支援多個技能
+    equippedSkills: [], // 支援多個技能
+    isSynced: false // 是否已與伺服器同步
 };
 window.gameState = gameState;
 
 // 延遲載入實際存檔
 setTimeout(() => {
-    gameState.keys = getSavedKeys();
-    gameState.coins = getSavedCoins();
-    gameState.kills = getSavedKills();
-    gameState.xp = getSavedXP();
-    gameState.level = getSavedLevel();
-    gameState.unlockedWeapons = getSavedWeapons();
-    gameState.unlockedSkills = getSavedSkills();
-    gameState.owned_items = getSavedOwnedItems();
-    gameState.weaponKills = getSavedWeaponKills();
-    
-    // 只有特定帳號強制給予 50 等與獎勵
-    const currentNickname = localStorage.getItem('playerNickname');
-    if (currentNickname === 'wesleygogo999') {
-        if (!gameState.unlockedWeapons.includes('energy_rifle')) gameState.unlockedWeapons.push('energy_rifle');
-        if (!gameState.unlockedSkills.includes('timestop')) gameState.unlockedSkills.push('timestop');
-        gameState.level = 50;
+    // 只有在還沒同步的情況下才從本地讀取
+    if (!gameState.isSynced) {
+        gameState.keys = getSavedKeys();
+        gameState.coins = getSavedCoins();
+        gameState.kills = getSavedKills();
+        gameState.xp = getSavedXP();
+        gameState.level = getSavedLevel();
+        gameState.unlockedWeapons = getSavedWeapons();
+        gameState.unlockedSkills = getSavedSkills();
+        gameState.owned_items = getSavedOwnedItems();
+        gameState.weaponKills = getSavedWeaponKills();
+        
+        // 只有特定帳號強制給予 50 等與獎勵
+        const currentNickname = localStorage.getItem('playerNickname');
+        if (currentNickname === 'wesleygogo999') {
+            if (!gameState.unlockedWeapons.includes('energy_rifle')) gameState.unlockedWeapons.push('energy_rifle');
+            if (!gameState.unlockedSkills.includes('timestop')) gameState.unlockedSkills.push('timestop');
+            gameState.level = 50;
+        }
+        
+        // 注意：不要在這裡調用 saveGameProgress()，以免覆蓋雲端正確資料
+        console.log("Game state loaded from local storage (waiting for server sync)");
     }
-    
-    saveGameProgress();
-    
-    console.log("Game state synchronized from storage");
 }, 100);
 
 const getSavedKeys = () => {
@@ -633,12 +636,25 @@ if (socket) {
         const data = response.data;
         if (data) {
             console.log("Login sync success:", data);
+            gameState.isSynced = true; 
             gameState.keys = data.keys || 300;
             gameState.coins = data.coins || data.keys || 300;
             gameState.kills = data.total_kills || data.kills || 0;
             gameState.xp = data.xp || 0;
             gameState.level = data.level || 1;
-            gameState.unlockedWeapons = data.unlockedWeapons || data.unlockedweapons || ['rifle', 'pistol'];
+            
+            // 針對 wesleygogo999 的特殊處理
+            const currentNickname = localStorage.getItem('playerNickname');
+            if (currentNickname === 'wesleygogo999') {
+                gameState.level = 50;
+                // 強制確保有武器
+                const weapons = data.unlockedWeapons || data.unlockedweapons || ['rifle', 'pistol'];
+                if (!weapons.includes('energy_rifle')) weapons.push('energy_rifle');
+                gameState.unlockedWeapons = weapons;
+            } else {
+                gameState.unlockedWeapons = data.unlockedWeapons || data.unlockedweapons || ['rifle', 'pistol'];
+            }
+
             gameState.unlockedSkills = data.unlockedSkills || data.unlockedskills || [];
             gameState.owned_items = data.owned_items || [];
             gameState.weaponKills = data.weaponKills || data.weapon_kills || {};

@@ -72,10 +72,12 @@ io.on('connection', (socket) => {
                 
                 if (cloudData) {
                     // 如果雲端有資料，檢查是否需要從本地遷移 (以金鑰或武器數量判斷)
+                    const cloudKeys = cloudData.keys || 0;
+                    const cloudWeaponsCount = (cloudData.unlockedWeapons?.length || cloudData.unlockedweapons?.length || 0);
+
                     const shouldMigrate = !playerData || 
-                        (playerData.keys > (cloudData.keys || 0)) || 
-                        (playerData.coins > (cloudData.coins || 0)) ||
-                        (playerData.unlockedweapons?.length > (cloudData.unlockedWeapons?.length || cloudData.unlockedweapons?.length || 0));
+                        (playerData.keys > cloudKeys) || 
+                        ((playerData.unlockedweapons?.length || 0) > cloudWeaponsCount);
 
                     if (shouldMigrate && playerData) {
                         console.log(`[遷移] 正在將 ${nickname} 的本地資料同步至雲端...`);
@@ -85,10 +87,11 @@ io.on('connection', (socket) => {
                                 nickname: nickname,
                                 keys: playerData.keys,
                                 coins: playerData.coins || playerData.keys,
-                                unlockedweapons: playerData.unlockedweapons,
-                                unlockedskills: playerData.unlockedskills,
+                                unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol'],
+                                unlockedSkills: playerData.unlockedskills || [],
                                 owned_items: playerData.owned_items || [],
-                                weapon_kills: playerData.weapon_kills || {}
+                                weapon_kills: playerData.weapon_kills || {},
+                                total_kills: playerData.kills || 0
                             }])
                             .select()
                             .single();
@@ -96,6 +99,9 @@ io.on('connection', (socket) => {
                         if (!upsertError) {
                             playerData = upsertedData;
                             console.log(`[成功] ${nickname} 資料同步完成！`);
+                        } else {
+                            console.error(`[失敗] ${nickname} 資料同步失敗:`, upsertError);
+                            playerData = cloudData;
                         }
                     } else {
                         // 否則以雲端資料為準
@@ -109,10 +115,11 @@ io.on('connection', (socket) => {
                             nickname: nickname,
                             keys: playerData.keys,
                             coins: playerData.coins || playerData.keys,
-                            unlockedweapons: playerData.unlockedweapons,
-                            unlockedskills: playerData.unlockedskills,
+                            unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol'],
+                            unlockedSkills: playerData.unlockedskills || [],
                             owned_items: playerData.owned_items || [],
-                            weapon_kills: playerData.weapon_kills || {}
+                            weapon_kills: playerData.weapon_kills || {},
+                            total_kills: playerData.kills || 0
                         }])
                         .select()
                         .single();
@@ -129,8 +136,8 @@ io.on('connection', (socket) => {
                 nickname: nickname,
                 keys: 300,
                 coins: 300,
-                unlockedweapons: ['rifle', 'pistol'],
-                unlockedskills: [],
+                unlockedWeapons: ['rifle', 'pistol'],
+                unlockedSkills: [],
                 owned_items: []
             };
             
@@ -154,11 +161,12 @@ io.on('connection', (socket) => {
             nickname: nickname,
             data: {
                 ...playerData,
-                unlockedSkills: playerData.unlockedskills || [],
-                unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol'],
+                unlockedSkills: playerData.unlockedSkills || playerData.unlockedskills || [],
+                unlockedWeapons: playerData.unlockedWeapons || playerData.unlockedweapons || ['rifle', 'pistol'],
                 coins: playerData.coins || playerData.keys || 300,
                 owned_items: playerData.owned_items || [],
-                weaponKills: playerData.weapon_kills || {}
+                weaponKills: playerData.weapon_kills || {},
+                kills: playerData.total_kills || playerData.kills || 0
             }
         });
 
@@ -200,8 +208,8 @@ io.on('connection', (socket) => {
                         keys: data.keys,
                         coins: data.coins || data.keys,
                         total_kills: data.kills || 0,
-                        unlockedweapons: data.unlockedWeapons,
-                        unlockedskills: data.unlockedSkills || [],
+                        unlockedWeapons: data.unlockedWeapons,
+                        unlockedSkills: data.unlockedSkills || [],
                         owned_items: data.owned_items || [],
                         weapon_kills: data.weaponKills || {}
                     })
