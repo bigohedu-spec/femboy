@@ -18,8 +18,14 @@ async function migrate() {
         const dataToUpload = {
             nickname: nickname,
             keys: p.keys || 300,
-            unlockedweapons: p.unlockedWeapons || ['rifle', 'pistol'],
-            unlockedskills: p.unlockedSkills || []
+            coins: p.coins || p.keys || 300,
+            xp: p.xp || 0,
+            level: p.level || 1,
+            unlockedWeapons: p.unlockedWeapons || ['rifle', 'pistol'],
+            unlockedSkills: p.unlockedSkills || [],
+            owned_items: p.owned_items || [],
+            weapon_kills: p.weaponKills || {},
+            total_kills: p.kills || 0
         };
 
         const { error } = await supabase

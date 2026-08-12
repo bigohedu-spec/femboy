@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS players (
     nickname TEXT PRIMARY KEY,
     keys INTEGER DEFAULT 300,
     coins INTEGER DEFAULT 300,
+    xp INTEGER DEFAULT 0,
+    level INTEGER DEFAULT 1,
     unlockedWeapons JSONB DEFAULT '["rifle", "pistol"]'::jsonb,
     unlockedSkills JSONB DEFAULT '[]'::jsonb,
     owned_items JSONB DEFAULT '[]'::jsonb,

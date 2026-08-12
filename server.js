@@ -55,8 +55,14 @@ io.on('connection', (socket) => {
             playerData = {
                 nickname: nickname,
                 keys: oldData.keys || 300,
+                coins: oldData.coins || oldData.keys || 300,
+                xp: oldData.xp || 0,
+                level: oldData.level || 1,
                 unlockedweapons: oldData.unlockedWeapons || ['rifle', 'pistol'],
-                unlockedskills: oldData.unlockedSkills || []
+                unlockedskills: oldData.unlockedSkills || [],
+                owned_items: oldData.owned_items || [],
+                weapon_kills: oldData.weaponKills || {},
+                total_kills: oldData.kills || 0
             };
         }
 
@@ -86,12 +92,14 @@ io.on('connection', (socket) => {
                             .upsert([{
                                 nickname: nickname,
                                 keys: playerData.keys,
-                                coins: playerData.coins || playerData.keys,
+                                coins: playerData.coins,
+                                xp: playerData.xp,
+                                level: playerData.level,
                                 unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol'],
                                 unlockedSkills: playerData.unlockedskills || [],
                                 owned_items: playerData.owned_items || [],
                                 weapon_kills: playerData.weapon_kills || {},
-                                total_kills: playerData.kills || 0
+                                total_kills: playerData.total_kills || 0
                             }])
                             .select()
                             .single();
@@ -114,7 +122,9 @@ io.on('connection', (socket) => {
                         .insert([{
                             nickname: nickname,
                             keys: playerData.keys,
-                            coins: playerData.coins || playerData.keys,
+                            coins: playerData.coins,
+                            xp: playerData.xp,
+                            level: playerData.level,
                             unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol'],
                             unlockedSkills: playerData.unlockedskills || [],
                             owned_items: playerData.owned_items || [],
@@ -136,6 +146,8 @@ io.on('connection', (socket) => {
                 nickname: nickname,
                 keys: 300,
                 coins: 300,
+                xp: 0,
+                level: 1,
                 unlockedWeapons: ['rifle', 'pistol'],
                 unlockedSkills: [],
                 owned_items: []
@@ -164,6 +176,8 @@ io.on('connection', (socket) => {
                 unlockedSkills: playerData.unlockedSkills || playerData.unlockedskills || [],
                 unlockedWeapons: playerData.unlockedWeapons || playerData.unlockedweapons || ['rifle', 'pistol'],
                 coins: playerData.coins || playerData.keys || 300,
+                xp: playerData.xp || 0,
+                level: playerData.level || 1,
                 owned_items: playerData.owned_items || [],
                 weaponKills: playerData.weapon_kills || {},
                 kills: playerData.total_kills || playerData.kills || 0
@@ -184,6 +198,8 @@ io.on('connection', (socket) => {
         const updateData = {
             keys: data.keys,
             coins: data.coins || data.keys,
+            xp: data.xp || 0,
+            level: data.level || 1,
             kills: data.kills || 0,
             unlockedWeapons: data.unlockedWeapons || ['rifle', 'pistol'],
             unlockedSkills: data.unlockedSkills || [],
@@ -207,6 +223,8 @@ io.on('connection', (socket) => {
                     .update({
                         keys: data.keys,
                         coins: data.coins || data.keys,
+                        xp: data.xp || 0,
+                        level: data.level || 1,
                         total_kills: data.kills || 0,
                         unlockedWeapons: data.unlockedWeapons,
                         unlockedSkills: data.unlockedSkills || [],
