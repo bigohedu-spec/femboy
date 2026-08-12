@@ -1,7 +1,8 @@
 {
   "wesleygogo999": {
-    "keys": 1730,
+    "keys": 2735,
     "coins": 3320,
+    "kills": 302,
     "unlockedWeapons": [
       "rifle",
       "knife",
@@ -31,12 +32,13 @@
       "vip"
     ],
     "weaponKills": {
-      "rifle": 91,
+      "rifle": 129,
       "energy": 72,
-      "flamethrower": 8,
+      "flamethrower": 9,
       "machinegun": 114,
       "paintball": 111,
-      "pistol": 8
+      "pistol": 8,
+      "energy_rifle": 27
     }
   },
   "dfdsfadfd": {

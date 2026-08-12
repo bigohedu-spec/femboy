@@ -1381,6 +1381,7 @@
         }
 
         socket.on('duelJoined', (room) => {
+            window.gameState.currentRoom = room;
             document.getElementById('room-status').innerText = `STATUS: IN ROOM [${room}]`;
             document.getElementById('room-status').style.color = 'var(--neon-red)';
             alert(`成功進入房間：${room}\n現在開始遊戲將只會遇到房間內的對手。`);

@@ -37,9 +37,11 @@ const sounds = {
     death: () => playSynthSound('sawtooth', 50, 0.5, 0.3),
     pickup: () => playSynthSound('triangle', 880, 0.2, 0.2),
     timestop: () => {
-        playSynthSound('sine', 200, 0.5, 0.3);
-        setTimeout(() => playSynthSound('sine', 150, 0.5, 0.3), 100);
-        setTimeout(() => playSynthSound('sine', 100, 0.8, 0.4), 200);
+        // 時停音效：低沈的嗡鳴與心跳感
+        playSynthSound('sine', 150, 0.8, 0.5);
+        setTimeout(() => playSynthSound('sine', 100, 0.8, 0.5), 150);
+        setTimeout(() => playSynthSound('sine', 50, 1.0, 0.8), 300);
+        setTimeout(() => playSynthSound('triangle', 1200, 0.2, 0.1), 500);
     }
 };
 
@@ -85,7 +87,8 @@ const gameState = {
     weaponKills: {},
     achievements: [],
     equippedSkills: [], // 支援多個技能
-    isSynced: false // 是否已與伺服器同步
+    isSynced: false, // 是否已與伺服器同步
+    currentRoom: 'global'
 };
 window.gameState = gameState;
 
@@ -105,7 +108,7 @@ setTimeout(() => {
         
         // 只有特定帳號強制給予 50 等與獎勵
         const currentNickname = localStorage.getItem('playerNickname');
-        if (currentNickname === 'wesleygogo999') {
+        if (currentNickname === 'wesleygogo999' || currentNickname === '806') {
             if (!gameState.unlockedWeapons.includes('energy_rifle')) gameState.unlockedWeapons.push('energy_rifle');
             if (!gameState.unlockedSkills.includes('timestop')) gameState.unlockedSkills.push('timestop');
             gameState.level = 50;
@@ -491,7 +494,7 @@ const weaponConfig = {
     energy_rifle: {
         name: '傳奇能量步槍',
         slot: 11,
-        damage: 50,
+        damage: 150,
         fireRate: 1000,
         color: 0x00ffff,
         size: [0.1, 0.2, 1.2],
@@ -1314,6 +1317,7 @@ function applyModelToGroup(container, type) {
         model.traverse(node => {
             if (node.isMesh) {
                 node.material = node.material.clone();
+                node.material.map = null; // 移除貼圖以顯示自訂顏色
                 node.material.color.setHex(0xffaa00); // 精英橙
             }
         });
@@ -1321,6 +1325,7 @@ function applyModelToGroup(container, type) {
         model.traverse(node => {
             if (node.isMesh) {
                 node.material = node.material.clone();
+                node.material.map = null;
                 node.material.color.setHex(0xff00ff); // BOSS 紫
             }
         });
@@ -1328,12 +1333,9 @@ function applyModelToGroup(container, type) {
         model.traverse(node => {
             if (node.isMesh) {
                 node.material = node.material.clone();
+                node.material.map = null;
                 node.material.color.setHex(0xff3333); // 普通紅
             }
-        });
-    } else {
-        model.traverse(node => {
-            if (node.isMesh) node.material.color.setHex(0x0000ff); // 普通藍
         });
     }
 
@@ -1388,8 +1390,8 @@ loader.load(modelUrl, (gltf) => {
         if (container) applyModelToGroup(container, enemy.userData.type);
     });
 
-    // 如果還沒有敵人，就生成一些
-    if (enemies.length === 0) {
+    // 如果還沒有敵人且不在單挑房間，就生成一些
+    if (enemies.length === 0 && (!window.gameState.currentRoom || window.gameState.currentRoom === 'global')) {
         for (let i = 0; i < 5; i++) {
             createEnemy((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60);
         }
@@ -1403,7 +1405,7 @@ loader.load(modelUrl, (gltf) => {
     loadingText.innerText = '模型載入失敗 (可能是 CORS 或網路問題)\n已啟動備用機甲模式';
     setTimeout(() => { if(loadingText.parentNode) document.body.removeChild(loadingText); }, 3000);
     
-    if (enemies.length === 0) {
+    if (enemies.length === 0 && (!window.gameState.currentRoom || window.gameState.currentRoom === 'global')) {
         for (let i = 0; i < 5; i++) createEnemy((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60);
     }
 });
@@ -2427,7 +2429,7 @@ function animate() {
             }
         }
 
-        if (enemies.length === 0 && canSpawnWave) spawnWave();
+        if (enemies.length === 0 && canSpawnWave && (!window.gameState.currentRoom || window.gameState.currentRoom === 'global')) spawnWave();
     }
     prevTime = time;
     updateUI();
