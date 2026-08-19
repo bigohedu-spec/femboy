@@ -149,16 +149,25 @@
                 btn.innerText = "登入中...";
                 btn.disabled = true;
 
-                // 檢查本地是否有「該暱稱專屬」的舊存檔資料
+                // 檢查本地是否有「該暱稱專屬」的舊存檔資料 (擴展到所有進度)
                 const localKeys = localStorage.getItem(nickname + '_game_keys');
                 const localWeapons = localStorage.getItem(nickname + '_game_unlocked_weapons');
+                const localKills = localStorage.getItem(nickname + '_game_kills');
+                const localXP = localStorage.getItem(nickname + '_game_xp');
+                const localLevel = localStorage.getItem(nickname + '_game_level');
+                const localWeaponKills = localStorage.getItem(nickname + '_game_weapon_kills');
+                const localSkills = localStorage.getItem(nickname + '_game_unlocked_skills');
                 
                 let migrationData = null;
-                if (localKeys || localWeapons) {
+                if (localKeys || localWeapons || localKills) {
                     migrationData = {
                         keys: parseInt(localKeys) || 300,
                         unlockedWeapons: localWeapons ? JSON.parse(localWeapons) : ['rifle', 'pistol'],
-                        unlockedSkills: []
+                        kills: parseInt(localKills) || 0,
+                        xp: parseInt(localXP) || 0,
+                        level: parseInt(localLevel) || 1,
+                        weaponKills: localWeaponKills ? JSON.parse(localWeaponKills) : {},
+                        unlockedSkills: localSkills ? JSON.parse(localSkills) : []
                     };
                 }
 
@@ -187,6 +196,15 @@
             localStorage.setItem(nickname + '_game_keys', data.keys);
             localStorage.setItem(nickname + '_game_unlocked_weapons', JSON.stringify(data.unlockedweapons || data.unlockedWeapons));
             localStorage.setItem(nickname + '_game_unlocked_skills', JSON.stringify(data.unlockedskills || data.unlockedSkills || []));
+            localStorage.setItem(nickname + '_game_kills', data.total_kills || data.kills || 0);
+            localStorage.setItem(nickname + '_game_xp', data.xp || 0);
+            localStorage.setItem(nickname + '_game_level', data.level || 1);
+            localStorage.setItem(nickname + '_game_weapon_kills', JSON.stringify(data.weapon_kills || data.weaponKills || {}));
+            
+            // 如果有成就也一併存入
+            if (data.achievements) {
+                localStorage.setItem(nickname + '_game_achievements', JSON.stringify(data.achievements));
+            }
             
             // 清理舊的全局存檔，避免污染新帳號
             localStorage.removeItem('game_keys');

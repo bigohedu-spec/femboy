@@ -667,7 +667,14 @@ if (socket) {
             gameState.owned_items = data.owned_items || [];
             gameState.weaponKills = data.weaponKills || data.weapon_kills || {};
             
-            socket.emit('getAchievements', data.nickname);
+            // 處理成就同步
+            if (data.achievements) {
+                gameState.achievements = data.achievements;
+                localStorage.setItem(getPlayerPrefix() + 'game_achievements', JSON.stringify(gameState.achievements));
+            } else {
+                socket.emit('getAchievements', data.nickname);
+            }
+
             const prefix = getPlayerPrefix();
             localStorage.setItem(prefix + 'game_keys', gameState.keys.toString());
             localStorage.setItem(prefix + 'game_coins', gameState.coins.toString());
