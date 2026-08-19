@@ -113,11 +113,11 @@ io.on('connection', (socket) => {
                                 coins: playerData.coins,
                                 xp: playerData.xp,
                                 level: playerData.level,
-                                unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol'],
-                                unlockedSkills: playerData.unlockedskills || [],
+                                unlockedWeapons: playerData.unlockedweapons || playerData.unlockedWeapons || ['rifle', 'pistol'],
+                                unlockedSkills: playerData.unlockedskills || playerData.unlockedSkills || [],
                                 owned_items: playerData.owned_items || [],
-                                weapon_kills: playerData.weapon_kills || {},
-                                total_kills: playerData.total_kills || 0
+                                weapon_kills: playerData.weapon_kills || playerData.weaponKills || {},
+                                total_kills: playerData.total_kills || playerData.kills || 0
                             }])
                             .select()
                             .single();
@@ -144,11 +144,11 @@ io.on('connection', (socket) => {
                             coins: playerData.coins,
                             xp: playerData.xp,
                             level: playerData.level,
-                            unlockedWeapons: playerData.unlockedweapons || ['rifle', 'pistol'],
-                            unlockedSkills: playerData.unlockedskills || [],
+                            unlockedWeapons: playerData.unlockedweapons || playerData.unlockedWeapons || ['rifle', 'pistol'],
+                            unlockedSkills: playerData.unlockedskills || playerData.unlockedSkills || [],
                             owned_items: playerData.owned_items || [],
-                            weapon_kills: playerData.weapon_kills || {},
-                            total_kills: playerData.kills || 0
+                            weapon_kills: playerData.weapon_kills || playerData.weaponKills || {},
+                            total_kills: playerData.total_kills || playerData.kills || 0
                         }])
                         .select()
                         .single();

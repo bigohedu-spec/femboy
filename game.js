@@ -111,7 +111,10 @@ setTimeout(() => {
         if (currentNickname === 'wesleygogo999' || currentNickname === '806') {
             if (!gameState.unlockedWeapons.includes('energy_rifle')) gameState.unlockedWeapons.push('energy_rifle');
             if (!gameState.unlockedSkills.includes('timestop')) gameState.unlockedSkills.push('timestop');
-            gameState.level = 50;
+            if (!gameState.unlockedSkills.includes('vampiric')) gameState.unlockedSkills.push('vampiric');
+            if (!gameState.owned_items.includes('vip')) gameState.owned_items.push('vip');
+            gameState.level = Math.max(gameState.level, 50);
+            gameState.coins = Math.max(gameState.coins, 6000);
         }
         
         // 注意：不要在這裡調用 saveGameProgress()，以免覆蓋雲端正確資料
