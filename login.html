@@ -66,7 +66,7 @@
             text-transform: uppercase;
             opacity: 0.8;
         }
-        input[type="text"] {
+        input[type="text"], input[type="password"] {
             width: 100%;
             padding: 14px;
             background: rgba(0, 255, 255, 0.03);
@@ -79,7 +79,7 @@
             box-sizing: border-box;
             letter-spacing: 1px;
         }
-        input[type="text"]:focus {
+        input[type="text"]:focus, input[type="password"]:focus {
             border-color: #00ffff;
             background: rgba(0, 255, 255, 0.08);
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
@@ -121,6 +121,10 @@
                 <label for="nickname" data-i18n="login-input">OPERATOR NICKNAME</label>
                 <input type="text" id="nickname" data-i18n="login-input" placeholder="ENTER NAME..." required maxlength="15" autocomplete="off">
             </div>
+            <div class="input-group">
+                <label for="password" data-i18n="login-password">ACCESS PASSWORD</label>
+                <input type="password" id="password" data-i18n="login-password-placeholder" placeholder="ENTER PASSWORD..." required maxlength="20">
+            </div>
             <button type="submit" class="login-btn" data-i18n="login-btn">ACCESS SYSTEM</button>
         </form>
         
@@ -128,8 +132,8 @@
             <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="color: #00ffff; text-decoration: none; font-size: 0.8em; opacity: 0.8;">English</a>
         </div>
 
-        <div class="footer-note">
-            PRIVATE ACCESS • NO PASSWORD REQUIRED
+        <div class="footer-note" data-i18n="login-note">
+            💡 New Operators: Password sets on first login
         </div>
     </div>
 
@@ -142,11 +146,13 @@
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const nickname = document.getElementById('nickname').value.trim();
+            const password = document.getElementById('password').value;
             const btn = e.target.querySelector('button');
             
-            if (nickname && !isRedirecting) {
+            if (nickname && password && !isRedirecting) {
                 isRedirecting = true;
-                btn.innerText = "登入中...";
+                const originalBtnText = btn.innerText;
+                btn.innerText = "ACCESSING...";
                 btn.disabled = true;
 
                 // 檢查本地是否有「該暱稱專屬」的舊存檔資料 (擴展到所有進度)
@@ -171,17 +177,35 @@
                     };
                 }
 
-                // 向伺服器登入
-                socket.emit('login', { nickname, migrationData });
+                // 向伺服器登入 (傳送密碼)
+                socket.emit('login', { nickname, password, migrationData });
 
                 // 設定超時備援
-                setTimeout(() => {
-                    if (localStorage.getItem('playerNickname') !== nickname) {
-                        console.log("伺服器回應較慢，改用本地模式進入");
-                        localStorage.setItem('playerNickname', nickname);
-                        window.location.href = 'index.html';
+                const timeout = setTimeout(() => {
+                    isRedirecting = false;
+                    btn.innerText = originalBtnText;
+                    btn.disabled = false;
+                    alert("Server Timeout / 伺服器連線超時");
+                }, 5000);
+
+                // 接收伺服器傳回的錯誤
+                socket.once('loginError', function(error) {
+                    clearTimeout(timeout);
+                    isRedirecting = false;
+                    btn.innerText = originalBtnText;
+                    btn.disabled = false;
+                    
+                    const lang = localStorage.getItem('gameLanguage') || 'zh';
+                    if (error === 'wrong_password') {
+                        alert(translations[lang]['login-error-pass'] || "Wrong Password");
+                    } else {
+                        alert(error);
                     }
-                }, 1500);
+                });
+
+                socket.once('loginSuccess', function() {
+                    clearTimeout(timeout);
+                });
             }
         });
 

@@ -2,6 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS players (
     nickname TEXT PRIMARY KEY,
+    password TEXT,
     keys INTEGER DEFAULT 300,
     coins INTEGER DEFAULT 300,
     xp INTEGER DEFAULT 0,

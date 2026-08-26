@@ -33,7 +33,16 @@
         's-berserker': '狂暴之魂',
         's-magnetic': '金鑰磁鐵',
         's-timestop': '時間暫停 (LV.50)',
-        'w-energy_rifle': '傳奇能量步槍'
+        'w-energy_rifle': '傳奇能量步槍',
+        'login-title': '登入系統',
+        'login-desc': '進入 3D 生存競技場',
+        'login-input': '特工暱稱',
+        'login-password': '存取密碼',
+        'login-password-placeholder': '輸入密碼...',
+        'login-btn': '存取系統',
+        'login-note': '💡 新玩家：輸入後即為您的初始密碼',
+        'login-error-pass': '❌ 密碼錯誤，請重新輸入',
+        'login-error-empty': '⚠️ 請輸入暱稱與密碼'
     },
     'en': {
         'nav-home': 'HOME',
@@ -67,7 +76,16 @@
         's-shadow': 'Shadow Step',
         's-precision': 'Deadly Precision',
         's-berserker': 'Berserker Soul',
-        's-magnetic': 'Credit Magnet'
+        's-magnetic': 'Credit Magnet',
+        'login-title': 'LOGIN',
+        'login-desc': 'Enter the 3D Survival Arena',
+        'login-input': 'OPERATOR NICKNAME',
+        'login-password': 'ACCESS PASSWORD',
+        'login-password-placeholder': 'ENTER PASSWORD...',
+        'login-btn': 'ACCESS SYSTEM',
+        'login-note': '💡 New Operators: Password sets on first login',
+        'login-error-pass': '❌ Incorrect Password',
+        'login-error-empty': '⚠️ Name and Password required'
     }
 };
 

@@ -10,6 +10,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+const PORT = process.env.PORT || 3000;
+
 // 伺服器端舊資料庫路徑 (用於遷移)
 const DATA_FILE = path.join(__dirname, 'players_data.json');
 
@@ -46,8 +48,13 @@ io.on('connection', (socket) => {
     // 處理登入請求
     socket.on('login', async (payload) => {
         const nickname = typeof payload === 'string' ? payload : payload.nickname;
+        const password = payload.password; // 取得密碼
         const migrationData = payload.migrationData; // 來自客戶端 localStorage 的遷移資料
         
+        if (!nickname || !password) {
+            return socket.emit('loginError', 'nickname_password_required');
+        }
+
         let playerData = null;
 
         // 1. 優先嘗試從本地 JSON 載入基礎資料 (伺服器端備份)
@@ -86,7 +93,7 @@ io.on('connection', (socket) => {
         // 3. 如果有 Supabase，嘗試從雲端同步
         if (supabase) {
             try {
-                // 讀取雲端現有資料
+                // 讀取雲端現有資料 (包含密碼欄位)
                 const { data: cloudData } = await supabase
                     .from('players')
                     .select('*')
@@ -94,6 +101,11 @@ io.on('connection', (socket) => {
                     .single();
                 
                 if (cloudData) {
+                    // 密碼驗證邏輯
+                    if (cloudData.password && cloudData.password !== password) {
+                        return socket.emit('loginError', 'wrong_password');
+                    }
+
                     // 如果雲端有資料，檢查是否需要從本地遷移 (以金鑰或武器數量判斷)
                     const cloudKeys = cloudData.keys || 0;
                     const cloudWeaponsCount = (cloudData.unlockedWeapons?.length || cloudData.unlockedweapons?.length || 0);
@@ -109,6 +121,7 @@ io.on('connection', (socket) => {
                             .from('players')
                             .upsert([{
                                 nickname: nickname,
+                                password: password, // 同步密碼
                                 keys: playerData.keys,
                                 coins: playerData.coins,
                                 xp: playerData.xp,
@@ -140,6 +153,7 @@ io.on('connection', (socket) => {
                         .from('players')
                         .insert([{
                             nickname: nickname,
+                            password: password, // 儲存新密碼
                             keys: playerData.keys,
                             coins: playerData.coins,
                             xp: playerData.xp,
@@ -163,6 +177,7 @@ io.on('connection', (socket) => {
         if (!playerData) {
             playerData = {
                 nickname: nickname,
+                password: password, // 儲存新密碼
                 keys: 300,
                 coins: 300,
                 xp: 0,
@@ -439,6 +454,42 @@ io.on('connection', (socket) => {
             }
         }
     });
+});
+
+// ========== 清空數據庫 API ==========
+// POST /api/clear-database - 清空所有玩家數據
+app.post('/api/clear-database', async (req, res) => {
+    try {
+        console.log('🧹 開始清空數據庫...');
+        
+        // 1. 清空本地 JSON 檔案
+        fs.writeFileSync(DATA_FILE, '{}', 'utf8');
+        console.log('✅ 本地檔案已清空');
+        
+        // 2. 清空 Supabase（如果已配置）
+        if (supabase) {
+            try {
+                await supabase.from('players').delete().neq('nickname', '');
+                console.log('✅ Supabase 雲端已清空');
+            } catch (e) {
+                console.warn('⚠️ Supabase 清空失敗（可能無配置）:', e.message);
+            }
+        }
+        
+        // 3. 清空伺服器記憶體中的玩家數據
+        Object.keys(players).forEach(key => delete players[key]);
+        
+        res.json({ 
+            success: true, 
+            message: '✅ 數據庫清空成功！本地檔案、Supabase（如有）和伺服器記憶已清空。'
+        });
+    } catch (error) {
+        console.error('❌ 清空失敗:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '清空失敗: ' + error.message 
+        });
+    }
 });
 
 let PORT = process.env.PORT || 3000;

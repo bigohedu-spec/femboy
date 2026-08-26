@@ -1,79 +1,23 @@
 {
-  "wesleygogo999": {
-    "keys": 345,
-    "coins": 6775,
-    "kills": 373,
+  "ㄎ": {
+    "keys": 375,
+    "coins": 4850,
+    "xp": 50,
+    "level": 1,
+    "kills": 4,
     "unlockedWeapons": [
       "rifle",
-      "knife",
-      "sniper",
-      "shotgun",
       "pistol",
-      "paintball",
-      "machinegun",
-      "rpg",
-      "flamethrower",
       "energy",
-      "vip",
-      "energy_rifle"
+      "vip"
     ],
-    "unlockedSkills": [
-      "scavenger",
-      "shadow",
-      "precision",
-      "magnetic",
-      "berserker",
-      "vampiric",
-      "adrenaline",
-      "shield",
-      "timestop"
-    ],
+    "unlockedSkills": [],
     "owned_items": [
+      "energy",
       "vip"
     ],
     "weaponKills": {
-      "rifle": 129,
-      "energy": 72,
-      "flamethrower": 9,
-      "machinegun": 114,
-      "paintball": 182,
-      "pistol": 8,
-      "energy_rifle": 27
+      "rifle": 4
     }
-  },
-  "dfdsfadfd": {
-    "keys": 7430,
-    "unlockedWeapons": [
-      "rifle",
-      "sniper",
-      "shotgun",
-      "knife",
-      "pistol",
-      "machinegun",
-      "rpg",
-      "flamethrower",
-      "paintball"
-    ]
-  },
-  "hgjjghj": {
-    "keys": 7430,
-    "unlockedWeapons": [
-      "rifle",
-      "sniper",
-      "shotgun",
-      "knife",
-      "pistol",
-      "machinegun",
-      "rpg",
-      "flamethrower",
-      "paintball"
-    ]
-  },
-  "esdd": {
-    "keys": 410,
-    "unlockedWeapons": [
-      "rifle",
-      "pistol"
-    ]
   }
 }
