@@ -454,42 +454,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// ========== 清空數據庫 API ==========
-// POST /api/clear-database - 清空所有玩家數據
-app.post('/api/clear-database', async (req, res) => {
-    try {
-        console.log('🧹 開始清空數據庫...');
-        
-        // 1. 清空本地 JSON 檔案
-        fs.writeFileSync(DATA_FILE, '{}', 'utf8');
-        console.log('✅ 本地檔案已清空');
-        
-        // 2. 清空 Supabase（如果已配置）
-        if (supabase) {
-            try {
-                await supabase.from('players').delete().neq('nickname', '');
-                console.log('✅ Supabase 雲端已清空');
-            } catch (e) {
-                console.warn('⚠️ Supabase 清空失敗（可能無配置）:', e.message);
-            }
-        }
-        
-        // 3. 清空伺服器記憶體中的玩家數據
-        Object.keys(players).forEach(key => delete players[key]);
-        
-        res.json({ 
-            success: true, 
-            message: '✅ 數據庫清空成功！本地檔案、Supabase（如有）和伺服器記憶已清空。'
-        });
-    } catch (error) {
-        console.error('❌ 清空失敗:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: '清空失敗: ' + error.message 
-        });
-    }
-});
-
 let PORT = process.env.PORT || 3000;
 
 function startServer(port) {
