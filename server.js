@@ -10,8 +10,6 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3000;
-
 // 伺服器端舊資料庫路徑 (用於遷移)
 const DATA_FILE = path.join(__dirname, 'players_data.json');
 
