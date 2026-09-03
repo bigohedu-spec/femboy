@@ -325,37 +325,6 @@ const spawnGoldenStatue = (position, quaternion) => {
     updateStatue();
 };
 
-    // 手腳 (簡化版)
-    const limbGeo = new THREE.BoxGeometry(0.15, 0.6, 0.15);
-    const lArm = new THREE.Mesh(limbGeo, goldMat);
-    lArm.position.set(-0.4, 0.7, 0); statue.add(lArm);
-    const rArm = new THREE.Mesh(limbGeo, goldMat);
-    rArm.position.set(0.4, 0.7, 0); statue.add(rArm);
-    
-    statue.position.copy(position);
-    statue.quaternion.copy(quaternion);
-    
-    scene.add(statue);
-    
-    // 3秒後消失
-    setTimeout(() => {
-        let opacity = 1.0;
-        const fade = setInterval(() => {
-            opacity -= 0.1;
-            statue.traverse(node => {
-                if (node.isMesh) {
-                    node.material.transparent = true;
-                    node.material.opacity = opacity;
-                }
-            });
-            if (opacity <= 0) {
-                clearInterval(fade);
-                scene.remove(statue);
-            }
-        }, 100);
-    }, 2000);
-};
-
 const showLevelUpPopup = (level) => {
     const popup = document.createElement('div');
     popup.style.cssText = `
