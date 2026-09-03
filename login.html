@@ -186,8 +186,8 @@
                     isRedirecting = false;
                     btn.innerText = originalBtnText;
                     btn.disabled = false;
-                    alert("Server Timeout / 伺服器連線超時，請檢查網路後重試");
-                }, 10000); // 增加到 10 秒供雲端同步
+                    alert("Server Timeout / 伺服器連線超時，請檢查網路或稍後重試 (Render 冷啟動可能需要較長時間)");
+                }, 15000); // 增加到 15 秒
 
                 // 接收伺服器傳回的錯誤
                 socket.once('loginError', function(error) {
@@ -201,27 +201,30 @@
                         alert(translations[lang]['login-error-pass'] || "Wrong Password");
                     } else if (error === 'password_required') {
                         alert("此帳號已存在，請輸入正確密碼");
+                    } else if (error === 'server_internal_error') {
+                        alert("伺服器內部錯誤，請聯繫開發者");
                     } else {
                         alert("登入失敗: " + error);
                     }
                 });
 
-                socket.once('loginSuccess', function() {
+                // 修改：統一處理成功邏輯，避免重複監聽
+                socket.once('loginSuccess', function(response) {
                     clearTimeout(timeout);
+                    handleLoginSuccess(response);
                 });
             }
         });
 
-        // 接收伺服器傳回的存檔
-        socket.on('loginSuccess', function(response) {
+        function handleLoginSuccess(response) {
             const nickname = response.nickname;
             const data = response.data;
-            const password = document.getElementById('password').value; // 獲取當前輸入的密碼
+            const password = document.getElementById('password').value; 
             
             console.log("從伺服器收到資料:", data);
 
             localStorage.setItem('playerNickname', nickname);
-            localStorage.setItem('playerPassword', password); // 儲存密碼供其他頁面驗證
+            localStorage.setItem('playerPassword', password); 
             localStorage.setItem(nickname + '_game_keys', data.keys);
             localStorage.setItem(nickname + '_game_unlocked_weapons', JSON.stringify(data.unlockedweapons || data.unlockedWeapons));
             localStorage.setItem(nickname + '_game_unlocked_skills', JSON.stringify(data.unlockedskills || data.unlockedSkills || []));
@@ -230,17 +233,15 @@
             localStorage.setItem(nickname + '_game_level', data.level || 1);
             localStorage.setItem(nickname + '_game_weapon_kills', JSON.stringify(data.weapon_kills || data.weaponKills || {}));
             
-            // 如果有成就也一併存入
             if (data.achievements) {
                 localStorage.setItem(nickname + '_game_achievements', JSON.stringify(data.achievements));
             }
             
-            // 清理舊的全局存檔，避免污染新帳號
             localStorage.removeItem('game_keys');
             localStorage.removeItem('game_unlocked_weapons');
             
             window.location.href = 'index.html';
-        });
+        }
 
         // 如果已經登入了，直接跳轉
         window.onload = function() {
