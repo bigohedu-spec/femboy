@@ -1373,6 +1373,13 @@
         if (loginNickname) {
             socket.emit('login', { nickname: loginNickname, password: loginPassword });
             
+            socket.on('loginError', (err) => {
+                console.error("驗證失效:", err);
+                localStorage.removeItem('playerNickname');
+                localStorage.removeItem('playerPassword');
+                window.location.href = 'login.html';
+            });
+
             // 如果在大廳有設定目標房間，登入後自動加入
             if (targetRoom) {
                 console.log(`正在自動加入目標房間: ${targetRoom}`);

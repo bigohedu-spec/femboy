@@ -422,6 +422,14 @@
         if (socket && currentNickname !== 'guest') {
             socket.emit('login', { nickname: currentNickname, password: currentPassword });
             
+            // 監聽登入錯誤，若失效則強制回登入頁
+            socket.on('loginError', (err) => {
+                console.error("驗證失效:", err);
+                localStorage.removeItem('playerNickname');
+                localStorage.removeItem('playerPassword');
+                window.location.href = 'login.html';
+            });
+
             // 監聽線上玩家列表
             socket.on('currentPlayers', (players) => {
                 const list = document.getElementById('lobby-player-list');

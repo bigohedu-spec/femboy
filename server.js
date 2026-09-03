@@ -212,42 +212,53 @@ io.on('connection', (socket) => {
 
     // 處理進度儲存
     socket.on('saveProgress', async (data) => {
-        if (!data.nickname) return;
-
-        // 嘗試從連線物件中取得密碼，確保本地備份也有密碼
-        const sessionPassword = players[socket.id]?.password;
-
-        // 1. 更新本地資料 (即使沒有 Supabase 也能持久化)
-        const updateData = {
-            nickname: data.nickname,
-            password: sessionPassword || oldPlayerData[data.nickname]?.password,
-            keys: data.keys,
-            coins: data.coins || data.keys,
-            xp: data.xp || 0,
-            level: data.level || 1,
-            kills: data.kills || 0,
-            unlockedWeapons: data.unlockedWeapons || ['rifle', 'pistol'],
-            unlockedSkills: data.unlockedSkills || [],
-            owned_items: data.owned_items || [],
-            weaponKills: data.weaponKills || {}
-        };
-        
-        oldPlayerData[data.nickname] = updateData;
-
         try {
-            fs.writeFileSync(DATA_FILE, JSON.stringify(oldPlayerData, null, 2));
-        } catch (e) {
-            console.error('儲存本地存檔失敗:', e);
-        }
+            if (!data.nickname) return;
 
-        // 2. 如果有 Supabase，同步到雲端
-        if (supabase) {
+            // [安全性] 驗證該連線是否擁有此暱稱，且密碼正確
+            const session = players[socket.id];
+            if (!session || session.nickname !== data.nickname) {
+                console.warn(`[拒絕存檔] 連線 ${socket.id} 嘗試存入 ${data.nickname} 的資料，但身份不符。`);
+                return;
+            }
+
+            const password = session.password;
+            if (!password) {
+                console.warn(`[拒絕存檔] ${data.nickname} 缺少連線密碼。`);
+                return;
+            }
+
+            // 1. 更新本地資料 (即使沒有 Supabase 也能持久化)
+            const updateData = {
+                nickname: data.nickname,
+                password: password,
+                keys: data.keys,
+                coins: data.coins || data.keys,
+                xp: data.xp || 0,
+                level: data.level || 1,
+                kills: data.kills || 0,
+                unlockedWeapons: data.unlockedWeapons || ['rifle', 'pistol'],
+                unlockedSkills: data.unlockedSkills || [],
+                owned_items: data.owned_items || [],
+                weaponKills: data.weaponKills || {}
+            };
+            
+            oldPlayerData[data.nickname] = updateData;
+
             try {
-                // 使用 upsert 確保即使紀錄不存在也能建立
+                fs.writeFileSync(DATA_FILE, JSON.stringify(oldPlayerData, null, 2));
+            } catch (e) {
+                console.error('儲存本地存檔失敗:', e);
+            }
+
+            // 2. 如果有 Supabase，同步到雲端
+            if (supabase) {
+                // [安全性] 存檔時必須包含密碼驗證，防止 RLS 漏洞
                 const { error } = await supabase
                     .from('players')
                     .upsert([{
                         nickname: data.nickname,
+                        password: password, // 必須包含密碼，否則可能被清空
                         keys: data.keys,
                         coins: data.coins || data.keys,
                         xp: data.xp || 0,
@@ -262,9 +273,9 @@ io.on('connection', (socket) => {
                 if (error) {
                     console.error('儲存到 Supabase 失敗:', error);
                 }
-            } catch (e) {
-                console.error('儲存時發生錯誤:', e);
             }
+        } catch (e) {
+            console.error('[存檔異常]', e);
         }
     });
 
