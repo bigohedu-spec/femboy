@@ -103,6 +103,31 @@
             box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
             transform: translateY(-2px);
         }
+        .mode-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+        .mode-btn {
+            background: none;
+            border: none;
+            color: #00ffff;
+            font-size: 0.8em;
+            letter-spacing: 2px;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: 0.3s;
+            padding: 5px 10px;
+            text-transform: uppercase;
+        }
+        .mode-btn.active {
+            opacity: 1;
+            border-bottom: 2px solid #00ffff;
+            font-weight: bold;
+        }
         .footer-note {
             margin-top: 30px;
             font-size: 0.7em;
@@ -113,9 +138,14 @@
 </head>
 <body>
     <div class="login-container">
-        <h1 data-i18n="login-title">LOGIN</h1>
-        <div class="subtitle" data-i18n="login-desc">Enter the 3D Survival Arena</div>
+        <h1 id="main-title" data-i18n="login-title">LOGIN</h1>
+        <div class="subtitle" id="main-subtitle" data-i18n="login-desc">Enter the 3D Survival Arena</div>
         
+        <div class="mode-toggle">
+            <button class="mode-btn active" id="btn-login-mode" onclick="setMode('login')">LOGIN</button>
+            <button class="mode-btn" id="btn-signup-mode" onclick="setMode('signup')">CREATE ACCOUNT</button>
+        </div>
+
         <form id="loginForm">
             <div class="input-group">
                 <label for="nickname" data-i18n="login-input">OPERATOR NICKNAME</label>
@@ -125,14 +155,14 @@
                 <label for="password" data-i18n="login-password">ACCESS PASSWORD</label>
                 <input type="password" id="password" data-i18n="login-password-placeholder" placeholder="ENTER PASSWORD..." required maxlength="20">
             </div>
-            <button type="submit" class="login-btn" data-i18n="login-btn">ACCESS SYSTEM</button>
+            <button type="submit" id="submit-btn" class="login-btn" data-i18n="login-btn">ACCESS SYSTEM</button>
         </form>
         
         <div style="margin-top: 20px;">
             <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="color: #00ffff; text-decoration: none; font-size: 0.8em; opacity: 0.8;">English</a>
         </div>
 
-        <div class="footer-note" data-i18n="login-note">
+        <div class="footer-note" id="footer-note" data-i18n="login-note">
             💡 New Operators: Password sets on first login
         </div>
     </div>
@@ -142,6 +172,32 @@
     <script>
         const socket = io();
         let isRedirecting = false;
+        let currentMode = 'login';
+
+        function setMode(mode) {
+            currentMode = mode;
+            const lang = localStorage.getItem('gameLanguage') || 'zh';
+            const isZh = lang === 'zh';
+            
+            // 更新按鈕狀態
+            document.getElementById('btn-login-mode').classList.toggle('active', mode === 'login');
+            document.getElementById('btn-signup-mode').classList.toggle('active', mode === 'signup');
+            
+            // 更新文字內容
+            const title = document.getElementById('main-title');
+            const submitBtn = document.getElementById('submit-btn');
+            const note = document.getElementById('footer-note');
+
+            if (mode === 'signup') {
+                title.innerText = isZh ? "註冊帳號" : "CREATE ACCOUNT";
+                submitBtn.innerText = isZh ? "建立並登入" : "CREATE & ACCESS";
+                note.innerText = isZh ? "💡 請記住您的密碼，之後登入需使用" : "💡 Remember your password for future access";
+            } else {
+                title.innerText = isZh ? "登入系統" : "LOGIN";
+                submitBtn.innerText = isZh ? "存取系統" : "ACCESS SYSTEM";
+                note.innerText = isZh ? "💡 遺失密碼將無法救回存檔" : "💡 Lost passwords cannot be recovered";
+            }
+        }
 
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
