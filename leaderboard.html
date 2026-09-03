@@ -146,8 +146,10 @@
 
         // 自動同步登入狀態
         const nickname = localStorage.getItem('playerNickname');
+        const password = localStorage.getItem('playerPassword') || '';
+        
         if (nickname) {
-            socket.emit('login', nickname);
+            socket.emit('login', { nickname, password });
         }
 
         // 請求全球數據

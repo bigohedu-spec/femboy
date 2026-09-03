@@ -358,7 +358,8 @@
             updateUI();
             
             // Sync with server if needed
-            socket.emit('login', nickname);
+            const password = localStorage.getItem('playerPassword') || '';
+            socket.emit('login', { nickname, password });
             socket.on('loginSuccess', (response) => {
                 const data = response.data;
                 if (data) {

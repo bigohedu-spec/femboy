@@ -177,6 +177,87 @@
             font-weight: bold;
             text-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
         }
+
+        /* 戰區大廳樣式 */
+        .lobby-panel {
+            position: absolute;
+            right: 20px;
+            top: 100px;
+            width: 250px;
+            background: rgba(0, 20, 20, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            color: #00ffff;
+            text-align: left;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+        .lobby-title {
+            font-size: 0.9em;
+            letter-spacing: 2px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            background: #00ff00;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            box-shadow: 0 0 5px #00ff00;
+        }
+        .player-list {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+        }
+        .player-item {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+        }
+        .player-item .room-tag {
+            font-size: 0.7em;
+            background: rgba(0, 255, 255, 0.1);
+            padding: 1px 4px;
+            border-radius: 3px;
+            color: #aaa;
+        }
+        .room-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .room-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            color: white;
+            padding: 5px;
+            font-size: 0.8em;
+            border-radius: 4px;
+            outline: none;
+        }
+        .small-btn {
+            padding: 5px;
+            font-size: 0.75em;
+            background: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .small-btn:hover {
+            background: rgba(0, 255, 255, 0.3);
+        }
+
         /* 導航列樣式 */
         .navbar {
             position: fixed;
@@ -336,10 +417,64 @@
         // 初始化 Socket 並同步登入狀態
         const socket = typeof io !== 'undefined' ? io() : null;
         const currentNickname = localStorage.getItem('playerNickname') || 'guest';
+        const currentPassword = localStorage.getItem('playerPassword') || '';
         
         if (socket && currentNickname !== 'guest') {
-            socket.emit('login', currentNickname);
+            socket.emit('login', { nickname: currentNickname, password: currentPassword });
+            
+            // 監聽線上玩家列表
+            socket.on('currentPlayers', (players) => {
+                const list = document.getElementById('lobby-player-list');
+                const count = document.getElementById('online-count');
+                if (!list || !count) return;
+
+                list.innerHTML = '';
+                const ids = Object.keys(players);
+                count.innerText = ids.length;
+
+                ids.forEach(id => {
+                    const p = players[id];
+                    const div = document.createElement('div');
+                    div.className = 'player-item';
+                    div.innerHTML = `
+                        <span>${p.nickname || 'Guest'}</span>
+                        <span class="room-tag">${p.room || 'global'}</span>
+                    `;
+                    list.appendChild(div);
+                });
+            });
+
+            // 每 5 秒自動更新一次全球玩家（如果需要）
+            setInterval(() => {
+                socket.emit('getOnlinePlayers'); // 假設伺服器有這個事件
+            }, 5000);
         }
+
+        function setRoom() {
+            const room = document.getElementById('target-room').value.trim();
+            if (room) {
+                localStorage.setItem('targetRoom', room);
+                document.getElementById('room-status-display').innerText = `CURRENT: ${room}`;
+                document.getElementById('room-status-display').style.color = '#00ffff';
+            }
+        }
+
+        function clearRoom() {
+            localStorage.removeItem('targetRoom');
+            document.getElementById('target-room').value = '';
+            document.getElementById('room-status-display').innerText = `CURRENT: GLOBAL`;
+            document.getElementById('room-status-display').style.color = '#aaa';
+        }
+
+        // 初始化房間顯示
+        window.addEventListener('DOMContentLoaded', () => {
+            const room = localStorage.getItem('targetRoom');
+            if (room) {
+                document.getElementById('room-status-display').innerText = `CURRENT: ${room}`;
+                document.getElementById('room-status-display').style.color = '#00ffff';
+                document.getElementById('target-room').value = room;
+            }
+        });
     </script>
 
     <div class="bg-animation" id="bg-stars"></div>
@@ -362,6 +497,24 @@
 
         <div class="stats-preview">
             🪙 <span id="coin-display">300</span> | 🔑 <span id="key-display">300</span>
+        </div>
+    </div>
+
+    <div class="lobby-panel">
+        <div class="lobby-title">
+            <span><span class="online-dot"></span>ONLINE OPS</span>
+            <span id="online-count">0</span>
+        </div>
+        <div class="player-list" id="lobby-player-list">
+            <div style="opacity: 0.5; font-size: 0.8em;">Scanning...</div>
+        </div>
+        <div class="room-controls">
+            <input type="text" id="target-room" class="room-input" placeholder="ROOM CODE (Optional)">
+            <div style="display: flex; gap: 5px;">
+                <button onclick="setRoom()" class="small-btn" style="flex: 1;">SET ROOM</button>
+                <button onclick="clearRoom()" class="small-btn">RESET</button>
+            </div>
+            <div id="room-status-display" style="font-size: 0.7em; color: #aaa; margin-top: 5px;">CURRENT: GLOBAL</div>
         </div>
     </div>
 

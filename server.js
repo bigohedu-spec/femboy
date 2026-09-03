@@ -58,8 +58,14 @@ io.on('connection', (socket) => {
         // 1. 優先嘗試從本地 JSON 載入基礎資料 (伺服器端備份)
         if (oldPlayerData[nickname]) {
             const oldData = oldPlayerData[nickname];
+            // [安全性] 如果本地已有存檔且包含密碼，則必須驗證
+            if (oldData.password && oldData.password !== password) {
+                console.log(`[拒絕] ${nickname} 嘗試登入，但本地密碼錯誤。`);
+                return socket.emit('loginError', 'wrong_password');
+            }
             playerData = {
                 nickname: nickname,
+                password: oldData.password || password, // 保留密碼
                 keys: oldData.keys || 300,
                 coins: oldData.coins || oldData.keys || 300,
                 xp: oldData.xp || 0,
@@ -71,11 +77,12 @@ io.on('connection', (socket) => {
                 total_kills: oldData.kills || 0
             };
         } 
-        // 2. 如果伺服器本地沒資料，但客戶端有傳入遷移資料 (適用於切換伺服器/Render)
+        // 2. 如果伺服器本地沒資料，但客戶端有傳入遷移資料
         else if (migrationData) {
             console.log(`[遷移] 收到來自 ${nickname} 的客戶端遷移資料`);
             playerData = {
                 nickname: nickname,
+                password: password, // 使用本次登入的密碼作為新存檔密碼
                 keys: migrationData.keys || 300,
                 coins: migrationData.coins || migrationData.keys || 300,
                 xp: migrationData.xp || 0,
@@ -100,11 +107,21 @@ io.on('connection', (socket) => {
                 
                 if (cloudData) {
                     // 密碼驗證邏輯
+                    // 如果雲端有密碼，必須匹配
                     if (cloudData.password && cloudData.password !== password) {
+                        console.log(`[拒絕] ${nickname} 嘗試登入，但雲端密碼錯誤。`);
                         return socket.emit('loginError', 'wrong_password');
                     }
-
-                    // 如果雲端有資料，檢查是否需要從本地遷移 (以金鑰或武器數量判斷)
+                    // 如果雲端還沒設密碼 (舊玩家第一回歸)，這一次的輸入將成為他的密碼
+                    if (!cloudData.password && password) {
+                        console.log(`[安全性] 為舊玩家 ${nickname} 初始化密碼...`);
+                        await supabase.from('players').update({ password: password }).eq('nickname', nickname);
+                    }
+                    
+                    // 如果有本地資料但沒雲端密碼，也同步一下
+                    if (playerData && !playerData.password) {
+                        playerData.password = password;
+                    }
                     const cloudKeys = cloudData.keys || 0;
                     const cloudWeaponsCount = (cloudData.unlockedWeapons?.length || cloudData.unlockedweapons?.length || 0);
 
@@ -179,7 +196,7 @@ io.on('connection', (socket) => {
                 keys: 300,
                 coins: 300,
                 xp: 0,
-                level: 1,
+                level: 50, // [修改] 配合開發者要求，預設等級調整為 50
                 unlockedWeapons: ['rifle', 'pistol'],
                 unlockedSkills: [],
                 owned_items: []
@@ -224,9 +241,10 @@ io.on('connection', (socket) => {
             }
         });
 
-        // 綁定暱稱到連線物件
+        // 綁定暱稱與密碼到連線物件
         if (players[socket.id]) {
             players[socket.id].nickname = nickname;
+            players[socket.id].password = password;
         }
     });
 
@@ -234,8 +252,13 @@ io.on('connection', (socket) => {
     socket.on('saveProgress', async (data) => {
         if (!data.nickname) return;
 
+        // 嘗試從連線物件中取得密碼，確保本地備份也有密碼
+        const sessionPassword = players[socket.id]?.password;
+
         // 1. 更新本地資料 (即使沒有 Supabase 也能持久化)
         const updateData = {
+            nickname: data.nickname,
+            password: sessionPassword || oldPlayerData[data.nickname]?.password,
             keys: data.keys,
             coins: data.coins || data.keys,
             xp: data.xp || 0,
@@ -325,6 +348,11 @@ io.on('connection', (socket) => {
         }
     });
 
+    // [新增] 獲取線上玩家列表 (用於大廳 Lobby)
+    socket.on('getOnlinePlayers', () => {
+        socket.emit('currentPlayers', players);
+    });
+
     // 初始化新玩家
     players[socket.id] = {
         id: socket.id,
@@ -352,6 +380,8 @@ io.on('connection', (socket) => {
         // 離開舊房間
         const oldRoom = players[socket.id].room;
         socket.leave(oldRoom);
+        // [修復] 通知舊房間的玩家該玩家已離開
+        socket.to(oldRoom).emit('playerDisconnected', socket.id);
         
         // 加入新房間
         socket.join(room);

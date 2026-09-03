@@ -180,13 +180,14 @@
                 // 向伺服器登入 (傳送密碼)
                 socket.emit('login', { nickname, password, migrationData });
 
-                // 設定超時備援
+                // 設定超時警告 (但不自動進入)
                 const timeout = setTimeout(() => {
+                    if (!isRedirecting) return;
                     isRedirecting = false;
                     btn.innerText = originalBtnText;
                     btn.disabled = false;
-                    alert("Server Timeout / 伺服器連線超時");
-                }, 5000);
+                    alert("Server Timeout / 伺服器連線超時，請檢查網路後重試");
+                }, 10000); // 增加到 10 秒供雲端同步
 
                 // 接收伺服器傳回的錯誤
                 socket.once('loginError', function(error) {
@@ -198,8 +199,10 @@
                     const lang = localStorage.getItem('gameLanguage') || 'zh';
                     if (error === 'wrong_password') {
                         alert(translations[lang]['login-error-pass'] || "Wrong Password");
+                    } else if (error === 'password_required') {
+                        alert("此帳號已存在，請輸入正確密碼");
                     } else {
-                        alert(error);
+                        alert("登入失敗: " + error);
                     }
                 });
 
@@ -213,10 +216,12 @@
         socket.on('loginSuccess', function(response) {
             const nickname = response.nickname;
             const data = response.data;
+            const password = document.getElementById('password').value; // 獲取當前輸入的密碼
             
             console.log("從伺服器收到資料:", data);
 
             localStorage.setItem('playerNickname', nickname);
+            localStorage.setItem('playerPassword', password); // 儲存密碼供其他頁面驗證
             localStorage.setItem(nickname + '_game_keys', data.keys);
             localStorage.setItem(nickname + '_game_unlocked_weapons', JSON.stringify(data.unlockedweapons || data.unlockedWeapons));
             localStorage.setItem(nickname + '_game_unlocked_skills', JSON.stringify(data.unlockedskills || data.unlockedSkills || []));

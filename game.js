@@ -277,27 +277,53 @@ const unlockAchievement = (id, title, desc) => {
 };
 
 const spawnGoldenStatue = (position, quaternion) => {
-    // 建立一個金色材質
+    // 建立一個更華麗的金色材質
     const goldMat = new THREE.MeshStandardMaterial({
         color: 0xffd700,
         metalness: 1.0,
-        roughness: 0.1,
-        emissive: 0xaa8800,
-        emissiveIntensity: 0.2
+        roughness: 0.05,
+        emissive: 0xffaa00,
+        emissiveIntensity: 0.5 // [修改] 增加發光感
     });
 
-    // 建立一個簡單的雕像 (使用原始模型結構，但全部換成金色)
+    // 建立一個雕像
     const statue = new THREE.Group();
     
-    // 身體
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.4), goldMat);
-    body.position.y = 0.7;
+    // 身體 (更有層次感)
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.0, 0.4), goldMat);
+    body.position.y = 0.5;
     statue.add(body);
     
     // 頭
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25), goldMat);
-    head.position.y = 1.3;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.3), goldMat);
+    head.position.y = 1.2;
     statue.add(head);
+    
+    // 翅膀/特效 (讓它更像 PADDY 想要的特效)
+    const wingsGeo = new THREE.TorusGeometry(0.5, 0.05, 16, 100);
+    const wings = new THREE.Mesh(wingsGeo, goldMat);
+    wings.position.y = 1.0;
+    wings.rotation.x = Math.PI / 2;
+    statue.add(wings);
+
+    statue.position.copy(position);
+    statue.quaternion.copy(quaternion);
+    scene.add(statue);
+    
+    // 緩慢旋轉並在 10 秒後消失
+    const startTime = performance.now();
+    const updateStatue = () => {
+        const elapsed = performance.now() - startTime;
+        if (elapsed < 10000) {
+            statue.rotation.y += 0.02;
+            statue.position.y += 0.005; // 緩緩升天
+            requestAnimationFrame(updateStatue);
+        } else {
+            scene.remove(statue);
+        }
+    };
+    updateStatue();
+};
 
     // 手腳 (簡化版)
     const limbGeo = new THREE.BoxGeometry(0.15, 0.6, 0.15);
@@ -497,7 +523,7 @@ const weaponConfig = {
     energy_rifle: {
         name: '傳奇能量步槍',
         slot: 11,
-        damage: 150,
+        damage: 250, // [修改] 提高傷害從 150 到 250
         fireRate: 1000,
         color: 0x00ffff,
         size: [0.1, 0.2, 1.2],
@@ -1310,10 +1336,14 @@ function createPlaceholder(type) {
     if (type === 'elite') color = 0xffaa00; // 精英改為橙色
     if (type === 'boss') color = 0xff00ff; // BOSS 改為紫色
     
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: color }));
+    // [修復] 確保材質使用 MeshStandardMaterial 以獲得更好的光影效果
+    const bodyMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.5, roughness: 0.5 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.4), bodyMat);
     body.position.y = 0.8;
     p.add(body);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25), new THREE.MeshStandardMaterial({ color: 0xffccaa }));
+    
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25), headMat);
     head.position.y = 1.5;
     p.add(head);
     return p;

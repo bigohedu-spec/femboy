@@ -1367,8 +1367,17 @@
 
         // 自動同步登入狀態
         const loginNickname = localStorage.getItem('playerNickname');
+        const loginPassword = localStorage.getItem('playerPassword') || '';
+        const targetRoom = localStorage.getItem('targetRoom');
+        
         if (loginNickname) {
-            socket.emit('login', loginNickname);
+            socket.emit('login', { nickname: loginNickname, password: loginPassword });
+            
+            // 如果在大廳有設定目標房間，登入後自動加入
+            if (targetRoom) {
+                console.log(`正在自動加入目標房間: ${targetRoom}`);
+                socket.emit('joinDuel', targetRoom);
+            }
         }
 
         // 1. 創造全新房間
