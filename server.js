@@ -57,6 +57,7 @@ io.on('connection', (socket) => {
             }
 
             let playerData = null;
+            let existingInLocal = false;
 
             // 1. 優先嘗試從本地 JSON 載入基礎資料 (伺服器端備份)
             if (oldPlayerData[nickname]) {
@@ -66,9 +67,10 @@ io.on('connection', (socket) => {
                     console.log(`[拒絕] ${nickname} 嘗試登入，但本地密碼錯誤。`);
                     return socket.emit('loginError', 'wrong_password');
                 }
+                existingInLocal = true;
                 playerData = {
                     nickname: nickname,
-                    password: oldData.password || password, // 保留密碼
+                    password: oldData.password || password,
                     keys: oldData.keys || 300,
                     coins: oldData.coins || oldData.keys || 300,
                     xp: oldData.xp || 0,
@@ -79,13 +81,51 @@ io.on('connection', (socket) => {
                     weapon_kills: oldData.weaponKills || {},
                     total_kills: oldData.kills || 0
                 };
-            } 
-            // 2. 如果伺服器本地沒資料，但客戶端有傳入遷移資料
-            else if (migrationData) {
-                console.log(`[遷移] 收到來自 ${nickname} 的客戶端遷移資料`);
+            }
+
+            // 2. 如果有 Supabase，嘗試從雲端同步
+            if (supabase) {
+                try {
+                    const { data: cloudData, error: fetchError } = await supabase
+                        .from('players')
+                        .select('*')
+                        .eq('nickname', nickname)
+                        .maybeSingle(); // 使用 maybeSingle 避免報錯
+                    
+                    if (cloudData) {
+                        // [關鍵] 如果雲端有資料，必須匹配密碼
+                        if (cloudData.password && cloudData.password !== password) {
+                            console.log(`[拒絕] ${nickname} 嘗試登入，但雲端密碼錯誤。`);
+                            return socket.emit('loginError', 'wrong_password');
+                        }
+                        
+                        // 如果雲端有資料，則以雲端為主 (防止 migrationData 覆蓋)
+                        playerData = cloudData;
+                    } else if (!existingInLocal && migrationData) {
+                        // 只有在雲端跟本地都沒資料時，才接受遷移資料
+                        console.log(`[遷移] 正在為 ${nickname} 建立新雲端存檔...`);
+                        playerData = {
+                            nickname: nickname,
+                            password: password,
+                            keys: migrationData.keys || 300,
+                            coins: migrationData.coins || migrationData.keys || 300,
+                            xp: migrationData.xp || 0,
+                            level: migrationData.level || 1,
+                            unlockedweapons: migrationData.unlockedWeapons || ['rifle', 'pistol'],
+                            unlockedskills: migrationData.unlockedSkills || [],
+                            owned_items: migrationData.owned_items || [],
+                            weapon_kills: migrationData.weaponKills || {},
+                            total_kills: migrationData.kills || 0
+                        };
+                    }
+                } catch (e) {
+                    console.error('Supabase 同步錯誤:', e);
+                }
+            } else if (!existingInLocal && migrationData) {
+                // 無 Supabase 且本地無資料，則使用遷移資料
                 playerData = {
                     nickname: nickname,
-                    password: password, // 使用本次登入的密碼作為新存檔密碼
+                    password: password,
                     keys: migrationData.keys || 300,
                     coins: migrationData.coins || migrationData.keys || 300,
                     xp: migrationData.xp || 0,
@@ -98,125 +138,35 @@ io.on('connection', (socket) => {
                 };
             }
 
-            // 3. 如果有 Supabase，嘗試從雲端同步
-            if (supabase) {
-                try {
-                    // 讀取雲端現有資料 (包含密碼欄位)
-                    const { data: cloudData } = await supabase
-                        .from('players')
-                        .select('*')
-                        .eq('nickname', nickname)
-                        .single();
-                    
-                    if (cloudData) {
-                        // 密碼驗證邏輯
-                        // 如果雲端有密碼，必須匹配
-                        if (cloudData.password && cloudData.password !== password) {
-                            console.log(`[拒絕] ${nickname} 嘗試登入，但雲端密碼錯誤。`);
-                            return socket.emit('loginError', 'wrong_password');
-                        }
-                        // 如果雲端還沒設密碼 (舊玩家第一回歸)，這一次的輸入將成為他的密碼
-                        if (!cloudData.password && password) {
-                            console.log(`[安全性] 為舊玩家 ${nickname} 初始化密碼...`);
-                            await supabase.from('players').update({ password: password }).eq('nickname', nickname);
-                        }
-                        
-                        // 如果有本地資料但沒雲端密碼，也同步一下
-                        if (playerData && !playerData.password) {
-                            playerData.password = password;
-                        }
-                        const cloudKeys = cloudData.keys || 0;
-                        const cloudWeaponsCount = (cloudData.unlockedWeapons?.length || cloudData.unlockedweapons?.length || 0);
-
-                        const shouldMigrate = playerData && (
-                            (playerData.keys > cloudKeys) || 
-                            ((playerData.unlockedweapons?.length || 0) > cloudWeaponsCount)
-                        );
-
-                        if (shouldMigrate) {
-                            console.log(`[同步] 正在將 ${nickname} 的較新資料同步至雲端...`);
-                            const { data: upsertedData, error: upsertError } = await supabase
-                                .from('players')
-                                .upsert([{
-                                    nickname: nickname,
-                                    password: password, // 同步密碼
-                                    keys: playerData.keys,
-                                    coins: playerData.coins,
-                                    xp: playerData.xp,
-                                    level: playerData.level,
-                                    unlockedWeapons: playerData.unlockedweapons || playerData.unlockedWeapons || ['rifle', 'pistol'],
-                                    unlockedSkills: playerData.unlockedskills || playerData.unlockedSkills || [],
-                                    owned_items: playerData.owned_items || [],
-                                    weapon_kills: playerData.weapon_kills || playerData.weaponKills || {},
-                                    total_kills: playerData.total_kills || playerData.kills || 0
-                                }])
-                                .select()
-                                .single();
-
-                            if (!upsertError) {
-                                playerData = upsertedData;
-                                console.log(`[成功] ${nickname} 資料雲端更新完成！`);
-                            } else {
-                                console.error(`[失敗] ${nickname} 資料雲端更新失敗:`, upsertError);
-                                playerData = cloudData;
-                            }
-                        } else {
-                            // 否則以雲端資料為準
-                            playerData = cloudData;
-                        }
-                    } else if (playerData) {
-                        // 雲端沒資料但有遷移資料，直接上傳至雲端
-                        console.log(`[初始化] 正在為 ${nickname} 建立雲端存檔...`);
-                        const { data: insertedData } = await supabase
-                            .from('players')
-                            .insert([{
-                                nickname: nickname,
-                                password: password, // 儲存新密碼
-                                keys: playerData.keys,
-                                coins: playerData.coins,
-                                xp: playerData.xp,
-                                level: playerData.level,
-                                unlockedWeapons: playerData.unlockedweapons || playerData.unlockedWeapons || ['rifle', 'pistol'],
-                                unlockedSkills: playerData.unlockedskills || playerData.unlockedSkills || [],
-                                owned_items: playerData.owned_items || [],
-                                weapon_kills: playerData.weapon_kills || playerData.weaponKills || {},
-                                total_kills: playerData.total_kills || playerData.kills || 0
-                            }])
-                            .select()
-                            .single();
-                        if (insertedData) playerData = insertedData;
-                    }
-                } catch (e) {
-                    console.error('Supabase 同步錯誤:', e);
-                }
-            }
-
             // 3. 如果依然沒資料 (完全的新玩家)
             if (!playerData) {
                 playerData = {
                     nickname: nickname,
-                    password: password, // 儲存新密碼
+                    password: password,
                     keys: 300,
                     coins: 300,
                     xp: 0,
-                    level: 50, // [修改] 配合開發者要求，預設等級調整為 50
+                    level: 50,
                     unlockedWeapons: ['rifle', 'pistol'],
                     unlockedSkills: [],
                     owned_items: []
                 };
-                
-                // 如果有 Supabase，在雲端建立新玩家
-                if (supabase) {
-                    try {
-                        const { data: insertedData } = await supabase
-                            .from('players')
-                            .insert([playerData])
-                            .select()
-                            .single();
-                        if (insertedData) playerData = insertedData;
-                    } catch (e) {
-                        console.error('建立雲端新玩家失敗:', e);
-                    }
+            }
+
+            // 4. 確保資料中有密碼 (新玩家或舊玩家補齊)
+            if (!playerData.password) playerData.password = password;
+
+            // 5. 如果有 Supabase，執行最後的 Upsert 確保同步
+            if (supabase) {
+                try {
+                    const { data: finalData } = await supabase
+                        .from('players')
+                        .upsert([playerData])
+                        .select()
+                        .single();
+                    if (finalData) playerData = finalData;
+                } catch (e) {
+                    console.error('Supabase 最終同步失敗:', e);
                 }
             }
             
