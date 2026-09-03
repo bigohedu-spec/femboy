@@ -211,30 +211,32 @@
                 btn.innerText = "ACCESSING...";
                 btn.disabled = true;
 
-                // 檢查本地是否有「該暱稱專屬」的舊存檔資料 (擴展到所有進度)
+                // [修復] 清除舊有的快取資料，確保登入的是新帳號
+                localStorage.removeItem('playerNickname');
+                localStorage.removeItem('playerPassword');
+
+                // 檢查本地是否有「該暱稱專屬」的舊存檔資料 (遷移邏輯)
                 const localKeys = localStorage.getItem(nickname + '_game_keys');
-                const localWeapons = localStorage.getItem(nickname + '_game_unlocked_weapons');
-                const localKills = localStorage.getItem(nickname + '_game_kills');
-                const localXP = localStorage.getItem(nickname + '_game_xp');
-                const localLevel = localStorage.getItem(nickname + '_game_level');
-                const localWeaponKills = localStorage.getItem(nickname + '_game_weapon_kills');
-                const localSkills = localStorage.getItem(nickname + '_game_unlocked_skills');
-                
                 let migrationData = null;
-                if (localKeys || localWeapons || localKills) {
+                if (localKeys) {
                     migrationData = {
                         keys: parseInt(localKeys) || 300,
-                        unlockedWeapons: localWeapons ? JSON.parse(localWeapons) : ['rifle', 'pistol'],
-                        kills: parseInt(localKills) || 0,
-                        xp: parseInt(localXP) || 0,
-                        level: parseInt(localLevel) || 1,
-                        weaponKills: localWeaponKills ? JSON.parse(localWeaponKills) : {},
-                        unlockedSkills: localSkills ? JSON.parse(localSkills) : []
+                        unlockedWeapons: JSON.parse(localStorage.getItem(nickname + '_game_unlocked_weapons')) || ['rifle', 'pistol'],
+                        kills: parseInt(localStorage.getItem(nickname + '_game_kills')) || 0,
+                        xp: parseInt(localStorage.getItem(nickname + '_game_xp')) || 0,
+                        level: parseInt(localStorage.getItem(nickname + '_game_level')) || 1,
+                        weaponKills: JSON.parse(localStorage.getItem(nickname + '_game_weapon_kills')) || {},
+                        unlockedSkills: JSON.parse(localStorage.getItem(nickname + '_game_unlocked_skills')) || []
                     };
                 }
 
-                // 向伺服器登入 (傳送密碼)
-                socket.emit('login', { nickname, password, migrationData });
+                // 向伺服器登入 (傳送密碼與模式)
+                socket.emit('login', { 
+                    nickname, 
+                    password, 
+                    isSignup: currentMode === 'signup',
+                    migrationData 
+                });
 
                 // 設定超時警告 (但不自動進入)
                 const timeout = setTimeout(() => {
@@ -255,8 +257,10 @@
                     const lang = localStorage.getItem('gameLanguage') || 'zh';
                     if (error === 'wrong_password') {
                         alert(translations[lang]['login-error-pass'] || "Wrong Password");
-                    } else if (error === 'password_required') {
-                        alert("此帳號已存在，請輸入正確密碼");
+                    } else if (error === 'user_already_exists') {
+                        alert(lang === 'zh' ? "此暱稱已被使用，請更換或切換至登入模式" : "Username already exists. Please choose another or login.");
+                    } else if (error === 'user_not_found') {
+                        alert(lang === 'zh' ? "找不到此帳號，請切換至註冊模式建立" : "Account not found. Please switch to Sign-up mode.");
                     } else if (error === 'server_internal_error') {
                         alert("伺服器內部錯誤，請聯繫開發者");
                     } else {
