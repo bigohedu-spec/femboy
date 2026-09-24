@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>全球記分板 - 3D Survival Arena</title>    <script>
-        if (!localStorage.getItem('playerNickname')) {
-            window.location.href = 'login.html';
-        }
+        // 移除強制登入檢查
     </script>    <style>
         body {
             margin: 0;
@@ -138,55 +136,33 @@
         <a href="index.html" class="back-btn" data-i18n="tut-back">返回遊戲首頁</a>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="translations.js"></script>
     <script>
-        const socket = io();
         const body = document.getElementById('leaderboard-body');
         const globalBody = document.getElementById('global-leaderboard-body');
 
-        // 自動同步登入狀態
-        const nickname = localStorage.getItem('playerNickname');
-        const password = localStorage.getItem('playerPassword') || '';
-        
-        if (nickname) {
-            socket.emit('login', { nickname, password });
-        }
-
-        // 請求全球數據
-        socket.emit('getGlobalLeaderboard');
-
-        socket.on('currentPlayers', (players) => {
-            updateList(players);
-        });
-
-        socket.on('globalLeaderboardData', (data) => {
-            updateGlobalList(data);
-        });
-
-        socket.on('playerDeath', (data) => {
-            updateList(data.players);
-        });
-
-        function updateList(players) {
-            const sorted = Object.values(players).sort((a, b) => b.score - a.score);
-            body.innerHTML = '';
-            
-            if (sorted.length === 0) {
-                body.innerHTML = '<tr><td colspan="3" style="text-align:center;">目前沒有玩家在線</td></tr>';
+        async function loadLeaderboards() {
+            if (typeof BO === 'undefined') {
+                console.warn("BO SDK not ready, retrying...");
+                setTimeout(loadLeaderboards, 500);
                 return;
             }
+            try {
+                // 獲取全球排行 (前 20 名)
+                const topScores = await BO.top('main', 20);
+                updateGlobalList(topScores);
+                
+                // 這裡的 "在線玩家" 在 BO 模式下如果沒有多人連線，可以顯示一樣的內容或隱藏
+                updateList([]); 
+            } catch (err) {
+                console.error("讀取排行失敗:", err);
+            }
+        }
 
-            sorted.forEach((p, index) => {
-                const tr = document.createElement('tr');
-                const rankClass = index < 3 ? `rank-${index + 1}` : 'rank';
-                const displayName = p.nickname || (p.id.substr(0, 8) + '...');
-                tr.innerHTML = `
-                    <td class="${rankClass}">${index + 1}</td>
-                    <td>${displayName}</td>
-                    <td style="font-family: monospace; font-size: 1.1em;">${p.score}</td>
-                `;
-                body.appendChild(tr);
-            });
+        loadLeaderboards();
+
+        function updateList(players) {
+            body.innerHTML = '<tr><td colspan="3" style="text-align:center;">（目前改由全球排行顯示）</td></tr>';
         }
 
         function updateGlobalList(data) {
@@ -198,6 +174,18 @@
 
             data.forEach((p, index) => {
                 const tr = document.createElement('tr');
+                const rankClass = index < 3 ? `rank-${index + 1}` : 'rank';
+                tr.innerHTML = `
+                    <td class="${rankClass}">${index + 1}</td>
+                    <td>${p.name}</td>
+                    <td style="font-family: monospace; font-size: 1.1em;">${p.score}</td>
+                `;
+                globalBody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
                 const rankClass = index < 3 ? `rank-${index + 1}` : 'rank';
                 tr.innerHTML = `
                     <td class="${rankClass}">${index + 1}</td>

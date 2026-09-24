@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>關於項目 - 3D Survival Arena</title>
     <script>
-        if (!localStorage.getItem('playerNickname')) {
-            window.location.href = 'login.html';
-        }
+        // 移除強制登入檢查
     </script>
     <style>
         body {
@@ -149,50 +147,37 @@
     </nav>
     <script src="translations.js"></script>
     <script>
-        // 抓取隨機名言
+        // 抓取隨機名言 (已移除外部 API 呼叫)
         async function fetchQuote() {
-            try {
-                const res = await fetch('https://dummyjson.com/quotes/random');
-                const data = await res.json();
-                document.getElementById('quote-text').textContent = `"${data.quote}"`;
-                document.getElementById('quote-author').textContent = `- ${data.author}`;
-            } catch (e) { console.error(e); }
+            document.getElementById('quote-text').textContent = `"Stay creative!"`;
+            document.getElementById('quote-author').textContent = `- System`;
         }
 
-        // 抓取隨機人物
+        // 抓取隨機人物 (已移除外部 API 呼叫)
         async function fetchUser() {
-            try {
-                const res = await fetch('https://randomuser.me/api/');
-                const data = await res.json();
-                const user = data.results[0];
-                document.getElementById('user-name').textContent = `${user.name.first} ${user.name.last}`;
-                document.getElementById('user-avatar').src = user.picture.large;
-            } catch (e) { console.error(e); }
+            document.getElementById('user-name').textContent = `Cyber Operator`;
+            document.getElementById('user-avatar').src = 'avatar.png'; // 請確保本地有此圖片
         }
 
-        // 抓取隨機貓圖（改為抓取 GIF 動圖）
+        // 抓取隨機貓圖 (已移除外部 API 呼叫)
         async function fetchCat() {
-            try {
-                const res = await fetch('https://api.thecatapi.com/v1/images/search?mime_types=gif');
-                const data = await res.json();
-                document.getElementById('cat-img').src = data[0].url;
-            } catch (e) { console.error(e); }
+            document.getElementById('cat-img').src = 'cat.png'; // 請確保本地有此圖片
         }
 
-        // 一鍵抓取所有資料（結合為個人檔案）
+        // 一鍵抓取所有資料
         async function refreshProfile() {
             const btn = document.getElementById('master-refresh-btn');
-            btn.textContent = 'GENERATING...';
-            btn.disabled = true;
-            
-            await Promise.all([fetchQuote(), fetchUser(), fetchCat()]);
-            
-            btn.textContent = '🎲 換一張卡片';
-            btn.disabled = false;
+            if (btn) {
+                btn.textContent = 'GENERATING...';
+                btn.disabled = true;
+                await Promise.all([fetchQuote(), fetchUser(), fetchCat()]);
+                btn.textContent = '🎲 重新整理';
+                btn.disabled = false;
+            }
         }
 
         // 初始化
-        refreshProfile();
+        window.onload = refreshProfile;
     </script>
     <div class="container" style="margin-top: 80px;">
         <h1 data-i18n="about-title">✨ 關於此專案</h1>

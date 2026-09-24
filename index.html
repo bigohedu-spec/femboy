@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Survival Arena - 主選單</title>
     <script>
-        // 登入檢查：如果沒有暱稱，跳轉回登入頁面
-        if (!localStorage.getItem('playerNickname')) {
-            window.location.href = 'login.html';
-        }
+        // 初始化：移除強制登入跳轉
     </script>
     <style>
         body {
@@ -411,51 +408,21 @@
         <a href="credits.html">ABOUT</a>
         <a href="#" onclick="toggleLanguage()" id="lang-toggle" style="margin-left: auto; color: var(--neon-yellow); opacity: 0.8;">English</a>
     </nav>
-    <script src="/socket.io/socket.io.js"></script>
     <script src="translations.js"></script>
     <script>
-        // 初始化 Socket 並同步登入狀態
-        const socket = typeof io !== 'undefined' ? io() : null;
-        const currentNickname = localStorage.getItem('playerNickname') || 'guest';
-        const currentPassword = localStorage.getItem('playerPassword') || '';
-        
-        if (socket && currentNickname !== 'guest') {
-            socket.emit('login', { nickname: currentNickname, password: currentPassword });
-            
-            // 監聽登入錯誤，若失效則強制回登入頁
-            socket.on('loginError', (err) => {
-                console.error("驗證失效:", err);
-                localStorage.removeItem('playerNickname');
-                localStorage.removeItem('playerPassword');
-                window.location.href = 'login.html';
-            });
+        // 初始化
+        window.addEventListener('load', () => {
+            const user = (typeof BO !== 'undefined') ? (BO.account.current() || BO.visitor) : { nickname: 'Guest' };
+            const currentNickname = user ? user.nickname : 'Guest';
+            const nickEl = document.getElementById('display-nickname');
+            if (nickEl) nickEl.innerText = currentNickname;
+        });
 
-            // 監聽線上玩家列表
-            socket.on('currentPlayers', (players) => {
-                const list = document.getElementById('lobby-player-list');
-                const count = document.getElementById('online-count');
-                if (!list || !count) return;
-
-                list.innerHTML = '';
-                const ids = Object.keys(players);
-                count.innerText = ids.length;
-
-                ids.forEach(id => {
-                    const p = players[id];
-                    const div = document.createElement('div');
-                    div.className = 'player-item';
-                    div.innerHTML = `
-                        <span>${p.nickname || 'Guest'}</span>
-                        <span class="room-tag">${p.room || 'global'}</span>
-                    `;
-                    list.appendChild(div);
-                });
-            });
-
-            // 每 5 秒自動更新一次全球玩家（如果需要）
-            setInterval(() => {
-                socket.emit('getOnlinePlayers'); // 假設伺服器有這個事件
-            }, 5000);
+        function logout() {
+            if (typeof BO !== 'undefined' && BO.account.current()) {
+                BO.account.logout();
+                location.reload();
+            }
         }
 
         function setRoom() {
@@ -478,9 +445,13 @@
         window.addEventListener('DOMContentLoaded', () => {
             const room = localStorage.getItem('targetRoom');
             if (room) {
-                document.getElementById('room-status-display').innerText = `CURRENT: ${room}`;
-                document.getElementById('room-status-display').style.color = '#00ffff';
-                document.getElementById('target-room').value = room;
+                const rs = document.getElementById('room-status-display');
+                if (rs) {
+                    rs.innerText = `CURRENT: ${room}`;
+                    rs.style.color = '#00ffff';
+                }
+                const tri = document.getElementById('target-room');
+                if (tri) tri.value = room;
             }
         });
     </script>
@@ -589,11 +560,43 @@
         }
 
         function logout() {
-            if (confirm('確定要登出並更改暱稱嗎？')) {
-                localStorage.removeItem('playerNickname');
-                window.location.href = 'login.html';
+            if (confirm('確定要登出嗎？')) {
+                if (BO.account.current()) {
+                    BO.account.logout();
+                }
+                location.reload();
             }
         }
+
+        // 暗碼功能 (kyle)
+        let cheatBuffer = "";
+        window.addEventListener('keydown', async (e) => {
+            cheatBuffer += e.key.toLowerCase();
+            if (cheatBuffer.endsWith("kyle")) {
+                cheatBuffer = "";
+                if (typeof BO === 'undefined') return alert("平台尚未就緒");
+                
+                alert("✨ KYLE MODE ACTIVATED ✨\n資源已全滿，所有武器解鎖！");
+                
+                const fullData = {
+                    keys: 999999,
+                    coins: 999999,
+                    kills: 5000,
+                    xp: 0,
+                    level: 50,
+                    unlockedWeapons: ['rifle', 'pistol', 'knife', 'sniper', 'shotgun', 'paintball', 'machinegun', 'rpg', 'flamethrower', 'energy', 'glass', 'energy_rifle'],
+                    unlockedSkills: ['vampiric', 'adrenaline', 'shield', 'scavenger', 'shadow', 'precision', 'berserker', 'magnetic', 'timestop'],
+                    owned_items: ['vip', 'knife', 'pistol', 'sniper', 'shotgun', 'paintball', 'machinegun', 'rpg', 'flamethrower', 'energy', 'glass'],
+                    weaponKills: { rifle: 500, sniper: 500, shotgun: 500, knife: 500, pistol: 500 },
+                    achievements: ['slayer_500', 'gold_rifle', 'gold_sniper', 'gold_shotgun', 'gold_knife', 'gold_pistol']
+                };
+                
+                await BO.set('game_save', fullData);
+                await BO.score('main', 5000);
+                location.reload();
+            }
+            if (cheatBuffer.length > 10) cheatBuffer = cheatBuffer.substring(1);
+        });
 
         // 解決瀏覽器「上一頁」導致卡在載入畫面的問題
         window.addEventListener('pageshow', (event) => {

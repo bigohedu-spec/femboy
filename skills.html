@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SKILLS - 3D Survival Arena</title>
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        if (!localStorage.getItem('playerNickname')) {
-            window.location.href = 'login.html';
-        }
+        // 移除強制登入檢查
     </script>
     <style>
         :root {
@@ -332,20 +329,16 @@
 
         function unlockSkill(id, cost) {
             if (playerKeys >= cost && !unlockedSkills.includes(id)) {
+                if (typeof BO === 'undefined') return alert("平台功能尚未就緒");
                 playerKeys -= cost;
                 unlockedSkills.push(id);
                 
-                // Save locally
-                localStorage.setItem(prefix + 'game_keys', playerKeys);
-                localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(unlockedSkills));
-                
-                // Save to server
-                const unlockedWeapons = JSON.parse(localStorage.getItem(prefix + 'game_unlocked_weapons')) || ['rifle', 'pistol'];
-                socket.emit('saveProgress', {
-                    nickname: nickname,
-                    keys: playerKeys,
-                    unlockedWeapons: unlockedWeapons,
-                    unlockedSkills: unlockedSkills
+                // Save to BO
+                BO.get('game_save').then(gs => {
+                    const data = gs || { unlockedWeapons: ['rifle', 'pistol'] };
+                    data.keys = playerKeys;
+                    data.unlockedSkills = unlockedSkills;
+                    BO.set('game_save', data);
                 });
 
                 updateUI();
@@ -354,24 +347,15 @@
         }
 
         // Initialize
-        window.onload = () => {
-            updateUI();
-            
-            // Sync with server if needed
-            const password = localStorage.getItem('playerPassword') || '';
-            socket.emit('login', { nickname, password });
-            socket.on('loginSuccess', (response) => {
-                const data = response.data;
-                if (data) {
-                    playerKeys = data.keys || 300;
-                    // 處理命名不一致 (Supabase 為全小寫)
-                    unlockedSkills = data.unlockedSkills || data.unlockedskills || [];
-                    
-                    localStorage.setItem(prefix + 'game_keys', playerKeys);
-                    localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(unlockedSkills));
-                    updateUI();
+        window.onload = async () => {
+            if (typeof BO !== 'undefined') {
+                const gs = await BO.get('game_save');
+                if (gs) {
+                    playerKeys = gs.keys || 300;
+                    unlockedSkills = gs.unlockedSkills || [];
                 }
-            });
+            }
+            updateUI();
         };
     </script>
 </body>

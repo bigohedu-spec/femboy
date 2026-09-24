@@ -50,12 +50,13 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050505);
 scene.fog = new THREE.Fog(0x050505, 0, 500);
 
-// 獲取存檔數據 (與暱稱綁定)
+// 獲取存檔數據 (與暱稱綁定) - 已棄用，改用 BO.get
 const getPlayerPrefix = () => {
-    return (localStorage.getItem('playerNickname') || 'guest') + '_';
+    const user = (typeof BO !== 'undefined') ? BO.account.current() : null;
+    return (user ? user.nickname : 'guest') + '_';
 };
 
-// 遊戲狀態初始化 (提升至最上方確保全域可用)
+// 遊戲狀態初始化
 const gameState = {
     playerHP: 250,
     maxHP: 250,
@@ -86,133 +87,70 @@ const gameState = {
     megaTime: 0,
     weaponKills: {},
     achievements: [],
-    equippedSkills: [], // 支援多個技能
-    isSynced: false, // 是否已與伺服器同步
-    currentRoom: 'global'
+    equippedSkills: [],
+    isSynced: false
 };
 window.gameState = gameState;
 
-// 延遲載入實際存檔
-setTimeout(() => {
-    // 只有在還沒同步的情況下才從本地讀取
-    if (!gameState.isSynced) {
-        gameState.keys = getSavedKeys();
-        gameState.coins = getSavedCoins();
-        gameState.kills = getSavedKills();
-        gameState.xp = getSavedXP();
-        gameState.level = getSavedLevel();
-        gameState.unlockedWeapons = getSavedWeapons();
-        gameState.unlockedSkills = getSavedSkills();
-        gameState.owned_items = getSavedOwnedItems();
-        gameState.weaponKills = getSavedWeaponKills();
-        
-        // 只有特定帳號強制給予 50 等與獎勵
-        const currentNickname = localStorage.getItem('playerNickname');
-        if (currentNickname === 'wesleygogo999' || currentNickname === '806') {
-            if (!gameState.unlockedWeapons.includes('energy_rifle')) gameState.unlockedWeapons.push('energy_rifle');
-            if (!gameState.unlockedSkills.includes('timestop')) gameState.unlockedSkills.push('timestop');
-            if (!gameState.unlockedSkills.includes('vampiric')) gameState.unlockedSkills.push('vampiric');
-            if (!gameState.owned_items.includes('vip')) gameState.owned_items.push('vip');
-            gameState.level = Math.max(gameState.level, 50);
-            gameState.coins = Math.max(gameState.coins, 6000);
+// 從 BO 雲端載入存檔
+async function loadGameProgress() {
+    if (typeof BO === 'undefined') {
+        console.warn("BO SDK not ready, waiting...");
+        setTimeout(loadGameProgress, 500);
+        return;
+    }
+    try {
+        const savedData = await BO.get('game_save');
+        if (savedData) {
+            console.log("從雲端載入存檔:", savedData);
+            Object.assign(gameState, savedData);
+            gameState.isSynced = true;
+            
+            // 針對特定帳號的特殊處理 (如果需要)
+            const user = (typeof BO !== 'undefined') ? BO.account.current() : null;
+            if (user && (user.nickname === 'wesleygogo999' || user.nickname === '806')) {
+                if (!gameState.unlockedWeapons.includes('energy_rifle')) gameState.unlockedWeapons.push('energy_rifle');
+                gameState.level = Math.max(gameState.level, 50);
+            }
+            
+            updateUI();
+            if (window.updateShopUI) window.updateShopUI();
+            if (window.updateLoadoutUI) window.updateLoadoutUI();
         }
-        
-        // 注意：不要在這裡調用 saveGameProgress()，以免覆蓋雲端正確資料
-        console.log("Game state loaded from local storage (waiting for server sync)");
+    } catch (e) {
+        console.error("雲端載入失敗:", e);
     }
-}, 100);
+}
 
-const getSavedKeys = () => {
-    const saved = localStorage.getItem(getPlayerPrefix() + 'game_keys');
-    if (saved === null) return 300; // 新玩家初始給予 300 鑰匙
-    const val = parseInt(saved);
-    return isNaN(val) ? 300 : val;
-};
+// 啟動載入
+loadGameProgress();
 
-const getSavedKills = () => {
-    const saved = localStorage.getItem(getPlayerPrefix() + 'game_kills');
-    return saved ? parseInt(saved) : 0;
-};
-
-const getSavedXP = () => {
-    const saved = localStorage.getItem(getPlayerPrefix() + 'game_xp');
-    return saved ? parseInt(saved) : 0;
-};
-
-const getSavedLevel = () => {
-    const currentNickname = localStorage.getItem('playerNickname');
-    if (currentNickname === 'wesleygogo999') return 50;
-    
-    const saved = localStorage.getItem(getPlayerPrefix() + 'game_level');
-    return saved ? parseInt(saved) : 1;
-};
-
-const getSavedCoins = () => {
-    const saved = localStorage.getItem(getPlayerPrefix() + 'game_coins');
-    if (saved === null) {
-        // 如果沒有 coins，嘗試從 keys 繼承，但不要反過來強制同步
-        const keys = localStorage.getItem(getPlayerPrefix() + 'game_keys');
-        return keys !== null ? parseInt(keys) : 300;
+// 暗碼功能 (kyle)
+let cheatBuffer = "";
+window.addEventListener('keydown', async (e) => {
+    cheatBuffer += e.key.toLowerCase();
+    if (cheatBuffer.endsWith("kyle")) {
+        cheatBuffer = "";
+        alert("✨ KYLE MODE ACTIVATED ✨");
+        gameState.keys = 999999;
+        gameState.coins = 999999;
+        gameState.level = 50;
+        gameState.unlockedWeapons = ['rifle', 'pistol', 'knife', 'sniper', 'shotgun', 'paintball', 'machinegun', 'rpg', 'flamethrower', 'energy', 'glass', 'energy_rifle'];
+        gameState.unlockedSkills = ['vampiric', 'adrenaline', 'shield', 'scavenger', 'shadow', 'precision', 'berserker', 'magnetic', 'timestop'];
+        gameState.owned_items = ['vip', 'knife', 'pistol', 'sniper', 'shotgun', 'paintball', 'machinegun', 'rpg', 'flamethrower', 'energy', 'glass'];
+        saveGameProgress();
+        updateUI();
+        if (window.updateShopUI) window.updateShopUI();
+        if (window.updateLoadoutUI) window.updateLoadoutUI();
     }
-    const val = parseInt(saved);
-    return isNaN(val) ? 300 : val;
-};
+    if (cheatBuffer.length > 10) cheatBuffer = cheatBuffer.substring(1);
+});
 
-const getSavedOwnedItems = () => {
+const saveGameProgress = async () => {
+    if (typeof BO === 'undefined') return;
+    // 存到雲端
     try {
-        const saved = localStorage.getItem(getPlayerPrefix() + 'game_owned_items');
-        return saved ? JSON.parse(saved) : [];
-    } catch(e) {
-        return [];
-    }
-};
-
-const getSavedWeaponKills = () => {
-    try {
-        const saved = localStorage.getItem(getPlayerPrefix() + 'game_weapon_kills');
-        return saved ? JSON.parse(saved) : {};
-    } catch(e) {
-        return {};
-    }
-};
-
-const getSavedWeapons = () => {
-    try {
-        const saved = localStorage.getItem(getPlayerPrefix() + 'game_unlocked_weapons');
-        return saved ? JSON.parse(saved) : ['rifle', 'pistol'];
-    } catch(e) {
-        return ['rifle', 'pistol'];
-    }
-};
-
-const getSavedSkills = () => {
-    try {
-        const saved = localStorage.getItem(getPlayerPrefix() + 'game_unlocked_skills');
-        return saved ? JSON.parse(saved) : [];
-    } catch(e) {
-        return [];
-    }
-};
-
-const saveGameProgress = () => {
-    const prefix = getPlayerPrefix();
-    const nickname = localStorage.getItem('playerNickname') || 'guest';
-    
-    // 存到瀏覽器本地 (備份)
-    localStorage.setItem(prefix + 'game_keys', gameState.keys.toString());
-    localStorage.setItem(prefix + 'game_coins', gameState.coins.toString());
-    localStorage.setItem(prefix + 'game_kills', gameState.kills.toString());
-    localStorage.setItem(prefix + 'game_xp', gameState.xp.toString());
-    localStorage.setItem(prefix + 'game_level', gameState.level.toString());
-    localStorage.setItem(prefix + 'game_unlocked_weapons', JSON.stringify(gameState.unlockedWeapons));
-    localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(gameState.unlockedSkills));
-    localStorage.setItem(prefix + 'game_owned_items', JSON.stringify(gameState.owned_items));
-    localStorage.setItem(prefix + 'game_weapon_kills', JSON.stringify(gameState.weaponKills));
-    
-    // 存到伺服器 (核心)
-    if (window.socket) {
-        window.socket.emit('saveProgress', {
-            nickname: nickname,
+        await BO.set('game_save', {
             keys: gameState.keys,
             coins: gameState.coins,
             kills: gameState.kills,
@@ -221,8 +159,14 @@ const saveGameProgress = () => {
             unlockedWeapons: gameState.unlockedWeapons,
             unlockedSkills: gameState.unlockedSkills,
             owned_items: gameState.owned_items,
-            weaponKills: gameState.weaponKills
+            weaponKills: gameState.weaponKills,
+            achievements: gameState.achievements
         });
+        
+        // 更新排行榜 (以總擊殺數為主)
+        await BO.score('main', gameState.kills);
+    } catch (e) {
+        console.error("雲端存檔失敗:", e);
     }
 };
 window.saveGameProgress = saveGameProgress;
@@ -263,17 +207,10 @@ const unlockAchievement = (id, title, desc) => {
     if (gameState.achievements.includes(id)) return;
     
     gameState.achievements.push(id);
-    const nickname = localStorage.getItem('playerNickname') || 'guest';
-    
-    if (socket) {
-        socket.emit('unlockAchievement', { nickname, achievementId: id });
-    }
+    saveGameProgress();
     
     // 顯示通知
-    showAchievementPopup(title, desc);
-    
-    // 存到本地備份
-    localStorage.setItem(getPlayerPrefix() + 'game_achievements', JSON.stringify(gameState.achievements));
+    if (window.showAchievementPopup) showAchievementPopup(title, desc);
 };
 
 const spawnGoldenStatue = (position, quaternion) => {
@@ -631,98 +568,14 @@ if (socket) {
         }
     });
 
-    socket.on('playerDisconnected', (id) => {
-        if (otherPlayers[id]) {
-            scene.remove(otherPlayers[id]);
-            delete otherPlayers[id];
-        }
-    });
-
-    socket.on('loginSuccess', (response) => {
-        const data = response.data;
-        if (data) {
-            console.log("Login sync success:", data);
-            gameState.isSynced = true; 
-            gameState.keys = data.keys || 300;
-            gameState.coins = data.coins || data.keys || 300;
-            gameState.kills = data.total_kills || data.kills || 0;
-            gameState.xp = data.xp || 0;
-            gameState.level = data.level || 1;
-            
-            // 針對 wesleygogo999 的特殊處理
-            const currentNickname = localStorage.getItem('playerNickname');
-            if (currentNickname === 'wesleygogo999') {
-                gameState.level = 50;
-                // 強制確保有武器
-                const weapons = data.unlockedWeapons || data.unlockedweapons || ['rifle', 'pistol'];
-                if (!weapons.includes('energy_rifle')) weapons.push('energy_rifle');
-                gameState.unlockedWeapons = weapons;
-            } else {
-                gameState.unlockedWeapons = data.unlockedWeapons || data.unlockedweapons || ['rifle', 'pistol'];
-            }
-
-            gameState.unlockedSkills = data.unlockedSkills || data.unlockedskills || [];
-            gameState.owned_items = data.owned_items || [];
-            gameState.weaponKills = data.weaponKills || data.weapon_kills || {};
-            
-            // 處理成就同步
-            if (data.achievements) {
-                gameState.achievements = data.achievements;
-                localStorage.setItem(getPlayerPrefix() + 'game_achievements', JSON.stringify(gameState.achievements));
-            } else {
-                socket.emit('getAchievements', data.nickname);
-            }
-
-            const prefix = getPlayerPrefix();
-            localStorage.setItem(prefix + 'game_keys', gameState.keys.toString());
-            localStorage.setItem(prefix + 'game_coins', gameState.coins.toString());
-            localStorage.setItem(prefix + 'game_kills', gameState.kills.toString());
-            localStorage.setItem(prefix + 'game_xp', gameState.xp.toString());
-            localStorage.setItem(prefix + 'game_level', gameState.level.toString());
-            localStorage.setItem(prefix + 'game_unlocked_weapons', JSON.stringify(gameState.unlockedWeapons));
-            localStorage.setItem(prefix + 'game_unlocked_skills', JSON.stringify(gameState.unlockedSkills));
-            localStorage.setItem(prefix + 'game_owned_items', JSON.stringify(gameState.owned_items));
-            localStorage.setItem(prefix + 'game_weapon_kills', JSON.stringify(gameState.weaponKills));
-            
-            updateUI();
-            checkAchievements(); // 登入後立即檢查所有漏掉的成就
-            if (window.updateShopUI) window.updateShopUI();
-            if (window.updateLoadoutUI) window.updateLoadoutUI();
-        }
-    });
-
-    socket.on('achievementsList', (list) => {
-        gameState.achievements = list.map(a => a.achievement_id);
-        localStorage.setItem(getPlayerPrefix() + 'game_achievements', JSON.stringify(gameState.achievements));
-        if (window.updateAchievementsUI) window.updateAchievementsUI();
-    });
+    // Socket logic removed for Big-Oh Hosting
 }
 
 function updateLeaderboard(players) {
-    const list = document.getElementById('score-list');
-    if (!list) return;
-    list.innerHTML = '';
-    Object.values(players)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5)
-        .forEach(p => {
-            const div = document.createElement('div');
-            div.className = 'score-item';
-            const name = p.id === socket.id ? '你' : p.id.substr(0, 4);
-            div.innerHTML = `<span>${name}</span> <span>${p.score}</span>`;
-            list.appendChild(div);
-        });
+    // Leaderboard logic moved to BO.top in leaderboard.html
 }
 
 function updateOtherPlayerHP(id, hp) {
-    const group = otherPlayers[id];
-    if (!group) return;
-    const hpBarFill = group.getObjectByName("hpBarFill");
-    if (hpBarFill) {
-        const hpPercent = Math.max(0, hp / 250);
-        hpBarFill.scale.x = hpPercent;
-        hpBarFill.position.x = (hpPercent - 1) * 0.5;
-    }
 }
 
 function addOtherPlayer(playerInfo) {
@@ -1370,10 +1223,10 @@ function applyModelToGroup(container, type) {
 const loader = new GLTFLoader();
 // 設定 Draco 解碼器 (修正模型無法解壓縮的問題)
 const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+// dracoLoader.setDecoderPath('draco/'); 
 loader.setDRACOLoader(dracoLoader);
 
-const modelUrl = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/RobotExpressive/RobotExpressive.glb'; 
+const modelUrl = 'robot.glb'; 
 
 // 顯示載入中
 const loadingText = document.createElement('div');
@@ -1706,9 +1559,7 @@ function performRaycast(config, isRightClick) {
                             damage *= multiplier;
                         }
 
-                        if (enemyGroup.userData.isPlayer && socket) {
-                            socket.emit('playerHit', { targetId: enemyGroup.userData.playerId, damage: damage });
-                        } else if (enemyGroup.userData.hp !== undefined) {
+                        if (enemyGroup.userData.hp !== undefined) {
                             if (config.isBurn) enemyGroup.userData.burnTicks = 10;
                             if (config.type === 'melee') {
                                 if (dist > 3) continue;
@@ -1788,14 +1639,7 @@ function performRaycast(config, isRightClick) {
                     createTracer(segmentStart, tracerEnd, color);
                 }
 
-                if (socket) {
-                    socket.emit('playerFire', { 
-                        start: segmentStart, 
-                        end: tracerEnd, 
-                        color: color,
-                        isBurn: config.isBurn 
-                    });
-                }
+                // socket logic removed
 
                 // 如果有反彈，計算下一段
                 if (config.bounces && b < bounceCount && hit.face) {
@@ -1821,7 +1665,7 @@ function performRaycast(config, isRightClick) {
                 }
 
                 if (socket) {
-                    socket.emit('playerFire', { start: segmentStart, end: tracerEnd, color: color, isBurn: config.isBurn });
+                    // socket.emit('playerFire', ...) removed
                 }
                 break;
             }
@@ -2205,14 +2049,8 @@ function animate() {
             limbGroup.position.y *= 0.9;
         }
 
-        // 傳送位置給伺服器
-        if (socket && time - lastMoveEmit > 50) {
-            socket.emit('playerMovement', {
-                position: camera.position,
-                rotation: { y: camera.rotation.y }
-            });
-            lastMoveEmit = time;
-        }
+        // 傳送位置給伺服器 (已移除)
+        lastMoveEmit = time;
 
         if (!window.isTimeStopped) {
             mixers.forEach(mixer => mixer.update(delta));

@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Survival Arena - 戰鬥準備</title>
-    <script>
-        // 登入檢查
-        if (!localStorage.getItem('playerNickname')) {
-            window.location.href = 'login.html';
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.167.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.167.0/examples/jsm/"
         }
+    }
+    </script>
+    <script>
+        // 登入檢查已移除，改由 BO 自動處理
     </script>
     <style>
         :root {
@@ -707,13 +712,10 @@
             
             if (confirm(`確定將 ${keys} 鑰匙轉換為 ${keys} 金幣嗎？`)) {
                 try {
+                    const gs = window.gameState;
+                    if (!gs) return;
                     gs.coins = coins + keys;
                     gs.keys = 0;
-                    
-                    const nickname = localStorage.getItem('playerNickname') || 'guest';
-                    const prefix = nickname + '_';
-                    localStorage.setItem(prefix + 'game_keys', "0");
-                    localStorage.setItem(prefix + 'game_coins', gs.coins.toString());
                     
                     if (window.saveGameProgress) window.saveGameProgress();
                     if (window.updateUI) window.updateUI();
@@ -980,32 +982,13 @@
         }
 
         function updateLoadoutUI() {
-            const nickname = localStorage.getItem('playerNickname') || 'guest';
-            const prefix = nickname + '_';
+            const gs = window.gameState;
+            if (!gs) return;
             const lang = localStorage.getItem('game_lang') || 'zh';
             
             // 獲取解鎖資料
-            let unlocked = ['rifle', 'pistol'];
-            try {
-                if (window.getUnlockedWeapons) {
-                    const gameUnlocked = window.getUnlockedWeapons();
-                    if (gameUnlocked && Array.isArray(gameUnlocked)) unlocked = gameUnlocked;
-                } else {
-                    const saved = localStorage.getItem(prefix + 'game_unlocked_weapons');
-                    if (saved) unlocked = JSON.parse(saved);
-                }
-            } catch(e) { console.error("Load weapons error:", e); }
-            
-            let unlockedSkills = [];
-            try {
-                if (window.getUnlockedSkills) {
-                    const gameSkills = window.getUnlockedSkills();
-                    if (gameSkills && Array.isArray(gameSkills)) unlockedSkills = gameSkills;
-                } else {
-                    const saved = localStorage.getItem(prefix + 'game_unlocked_skills');
-                    if (saved) unlockedSkills = JSON.parse(saved);
-                }
-            } catch(e) { console.error("Load skills error:", e); }
+            const unlocked = gs.unlockedWeapons || ['rifle', 'pistol'];
+            const unlockedSkills = gs.unlockedSkills || [];
             
             const container = document.getElementById('unlocked-weapon-tags');
             const skillContainer = document.getElementById('unlocked-skill-tags');
@@ -1149,43 +1132,10 @@
             updateLoadoutUI();
         }
 
-        // 從本地讀取設定 (如感應度等)
-        const nickname = localStorage.getItem('playerNickname') || 'guest';
-        const prefix = nickname + '_';
-        
-        const savedSens = localStorage.getItem('game_sensitivity');
-        const savedZoomSens = localStorage.getItem('game_zoom_sensitivity');
-        const savedVolume = localStorage.getItem('game_volume');
-        const savedKeys = localStorage.getItem(prefix + 'game_keys');
-        const savedUnlocked = JSON.parse(localStorage.getItem(prefix + 'game_unlocked_weapons')) || ['rifle', 'pistol'];
-        
-        window.gameSensitivity = savedSens ? parseFloat(savedSens) : 1.0;
-        window.zoomSensitivity = savedZoomSens ? parseFloat(savedZoomSens) : 0.5;
-        const initialVolume = savedVolume ? parseFloat(savedVolume) : 0.5;
-        const initialKeys = savedKeys !== null ? parseInt(savedKeys) : 300; // 新玩家初始 300
-        
-        // 更新 UI
-        updateSens(window.gameSensitivity);
-        updateSens(window.zoomSensitivity, true);
-        volumeSlider.value = initialVolume;
-        volumeValue.innerText = Math.round(initialVolume * 100) + '%';
-        
-        // 顯示已解鎖的按鈕
-        savedUnlocked.forEach(id => {
-            const btn = document.getElementById(`unlock-${id}`);
-            if (btn) {
-                btn.innerText = '已解鎖';
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-            }
-        });
-        
         // 等待遊戲初始化後同步狀態
         setTimeout(() => {
-            if (window.setGameVolume) window.setGameVolume(initialVolume);
-            if (window.updateModalKeys) window.updateModalKeys(initialKeys);
             updateLoadoutUI();
-        }, 800);
+        }, 1200);
 
         function startGame() {
             if (!currentLoadout.primary && !currentLoadout.secondary) {
@@ -1352,80 +1302,42 @@
         <div style="position: absolute; top: 50%; left: 50%; width: 14px; height: 2px; background: white; transform: translate(-50%, -50%);"></div>
         <div style="position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: var(--neon-blue); border-radius: 50%; transform: translate(-50%, -50%);"></div>
     </div>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        window.socket = socket; // 讓 game.js 可以使用
-
-        // 自動同步登入狀態
-        const loginNickname = localStorage.getItem('playerNickname');
-        const loginPassword = localStorage.getItem('playerPassword') || '';
-        const targetRoom = localStorage.getItem('targetRoom');
-        
-        if (loginNickname) {
-            socket.emit('login', { nickname: loginNickname, password: loginPassword });
-            
-            socket.on('loginError', (err) => {
-                console.error("驗證失效:", err);
-                localStorage.removeItem('playerNickname');
-                localStorage.removeItem('playerPassword');
-                window.location.href = 'login.html';
-            });
-
-            // 如果在大廳有設定目標房間，登入後自動加入
-            if (targetRoom) {
-                console.log(`正在自動加入目標房間: ${targetRoom}`);
-                socket.emit('joinDuel', targetRoom);
+        // 使用 BO 身分，若無登入則使用訪客 (延遲到 load 確保 SDK 已載入)
+        window.addEventListener('load', async () => {
+            if (typeof BO !== 'undefined') {
+                const user = BO.account.current() || BO.visitor;
+                document.getElementById('player-name-display').textContent = user ? user.nickname : '未知';
+            } else {
+                document.getElementById('player-name-display').textContent = 'Guest';
             }
+        });
+
+        // 房間功能改由 BO.room 提供 (如果需要)
+        async function createNewDuel() {
+            if (typeof BO === 'undefined') return alert("平台功能尚未就緒");
+            const room = await BO.room.create();
+            alert(`成功建立房間：${room.id}`);
+            window.currentRoom = room;
         }
 
-        // 1. 創造全新房間
-        function createNewDuel() {
-            const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-            document.getElementById('room-code-input').value = randomCode;
-            socket.emit('joinDuel', randomCode);
-        }
-
-        // 2. 透過輸入碼加入房間
-        function joinDuelByInput() {
+        async function joinDuelByInput() {
+            if (typeof BO === 'undefined') return alert("平台功能尚未就緒");
             const code = document.getElementById('room-code-input').value.trim();
             if (!code) {
-                alert('請貼上或輸入邀請碼！');
+                alert('請輸入 4 碼房號！');
                 return;
             }
-            socket.emit('joinDuel', code);
+            try {
+                const room = await BO.room.join(code);
+                window.currentRoom = room;
+                alert(`成功進入房間：${code}`);
+            } catch (e) {
+                alert("進入失敗: " + e);
+            }
         }
-
-        socket.on('duelJoined', (room) => {
-            window.gameState.currentRoom = room;
-            document.getElementById('room-status').innerText = `STATUS: IN ROOM [${room}]`;
-            document.getElementById('room-status').style.color = 'var(--neon-red)';
-            alert(`成功進入房間：${room}\n現在開始遊戲將只會遇到房間內的對手。`);
-        });
-
-        socket.on('duelError', (msg) => {
-            alert(msg);
-        });
-
-        function leaveRoom() {
-            socket.emit('joinDuel', 'global');
-            document.getElementById('room-status').innerText = `STATUS: PUBLIC SERVER`;
-            document.getElementById('room-status').style.color = '#888';
-            document.getElementById('room-code-input').value = '';
-        }
-
-        // 顯示玩家暱稱
-        document.getElementById('player-name-display').textContent = localStorage.getItem('playerNickname') || '未知';
     </script>
-    <script type="module" src="game.js?v=8"></script>
+    <script type="module" src="game.js?v=9"></script>
 </body>
 </html>
 

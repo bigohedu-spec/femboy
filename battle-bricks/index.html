@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wesley67 battle bricks - Prototype</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui-top">
+            <div class="stats">金幣: <span id="gold-count">0</span></div>
+            <div class="stats">WESLEY: <span id="wesley-count">0</span></div>
+            <div class="stats">章節: <span id="chapter-count">1</span>/3</div>
+            <div class="stats">能量: <span id="energy-count">0</span>/67</div>
+        </div>
+
+        <div id="start-screen" class="overlay">
+            <h1>準備戰鬥</h1>
+            <div style="margin: 20px 0; display: flex; align-items: center; justify-content: center; gap: 20px;">
+                <button id="prev-chapter" class="spawn-btn" style="padding: 5px 15px;"><</button>
+                <p id="start-chapter-info" style="font-size: 24px; margin: 0; font-weight: bold;">目前章節: 第 1 章</p>
+                <button id="next-chapter" class="spawn-btn" style="padding: 5px 15px;">></button>
+            </div>
+            <div style="display: flex; gap: 10px; flex-direction: column; align-items: center;">
+                <button id="start-game" class="spawn-btn" style="background-color: #2ecc71; width: 200px; font-size: 20px;">開始戰鬥</button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="open-shop-pre" class="spawn-btn" style="background-color: #d4af37;">進入商店</button>
+                    <button id="open-upgrades-pre" class="spawn-btn" style="background-color: #4a90e2;">強化角色</button>
+                </div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="ui-bottom">
+            <button id="spawn-basic" class="spawn-btn">召喚方塊兵 ($10)</button>
+            <button id="spawn-fast" class="spawn-btn" disabled title="需 500 WESLEY 解鎖">快速兵 ($25)</button>
+            <button id="spawn-archer" class="spawn-btn" disabled title="需 800 WESLEY 解鎖">弓箭兵 ($35)</button>
+            <button id="spawn-tank" class="spawn-btn" disabled title="需 1000 WESLEY 解鎖">重裝兵 ($50)</button>
+            <button id="open-shop" class="spawn-btn" style="background-color: #d4af37;">商店 SHOP</button>
+        </div>
+
+        <div id="victory-screen" class="overlay" style="display: none;">
+            <h1>勝利！</h1>
+            <p>獲得了 1 點能量與 100 WESLEY 幣</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="replay-level" class="spawn-btn">再次挑戰</button>
+                <button id="next-level" class="spawn-btn">下一章節</button>
+            </div>
+        </div>
+
+        <div id="failure-screen" class="overlay" style="display: none;">
+            <h1>失敗...</h1>
+            <p>你的塔被摧毀了！</p>
+            <button id="retry-level" class="spawn-btn" style="background-color: #e24a4a;">重新挑戰</button>
+        </div>
+
+        <div id="shop-screen" class="overlay" style="display: none;">
+            <h1>角色商店</h1>
+            <div class="shop-item">
+                <span>快速兵 (解鎖: 500 WESLEY)</span>
+                <button id="unlock-fast" class="spawn-btn">解鎖</button>
+            </div>
+            <div class="shop-item">
+                <span>弓箭兵 (解鎖: 800 WESLEY)</span>
+                <button id="unlock-archer" class="spawn-btn">解鎖</button>
+            </div>
+            <div class="shop-item">
+                <span>重裝兵 (解鎖: 1000 WESLEY)</span>
+                <button id="unlock-tank" class="spawn-btn">解鎖</button>
+            </div>
+            <button id="close-shop" class="spawn-btn">關閉</button>
+        </div>
+
+        <div id="upgrade-screen" class="overlay" style="display: none; width: 450px;">
+            <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
+                <h2 id="tab-chars" style="cursor: pointer; color: #4a90e2;">角色強化</h2>
+                <h2 id="tab-system" style="cursor: pointer; color: #aaa;">系統強化</h2>
+            </div>
+            <div id="upgrade-list-chars">
+                <!-- 角色強化列表 -->
+            </div>
+            <div id="upgrade-list-system" style="display: none;">
+                <!-- 系統強化列表 -->
+            </div>
+            <p style="margin-top: 20px;">每次強化花費: 100 WESLEY</p>
+            <button id="close-upgrades" class="spawn-btn">關閉</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
